@@ -4,3 +4,9 @@ __pycache__/
 .env
 .ipynb_checkpoints/
 .streamlit/secrets.toml
+
+# Pipeline (Airflow): logs, plugins y datos generados se recrean al correrlo
+pipeline/logs/
+pipeline/plugins/
+pipeline/include/output/
+pipeline/.env

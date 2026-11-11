@@ -1,0 +1,329 @@
+"""
+Descarga datos crudos de los repos de GitHub a la capa bronce.
+
+Solo descarga lo que falta (idempotente). Para FastF1 baja metadata y la
+telemetria selectiva necesaria para Plata: la vuelta mas rapida por piloto y
+todas las vueltas MEDIUM que pasan los filtros.
+
+Fuentes:
+  - TracingInsights-Archive/Stats : resultados, quali y standings (Ergast)
+  - TracingInsights/{year}        : 2018+, telemetria de practicas FastF1
+"""
+from __future__ import annotations
+
+import json
+import logging
+import time
+import urllib.error
+import urllib.request
+from collections import defaultdict
+from pathlib import Path
+from urllib.parse import quote
+
+from f1.config import (
+    ARCHIVE_FILES,
+    ARCHIVE_REPO,
+    BRONZE_ERGAST,
+    BRONZE_FASTF1,
+    FASTF1_SESSIONS,
+    HEADERS,
+    RAW_BASE,
+    RETRIES,
+    SLEEP_BETWEEN_REQUESTS,
+    TIMEOUT,
+    TRACING_REPO_TEMPLATE,
+)
+from f1.laps import filter_outliers, slugify, valid_laps
+
+log = logging.getLogger(__name__)
+
+# ------------------------------------------------------------------ utilidades
+
+
+def _fetch(url: str, retries: int = RETRIES) -> bytes | None:
+    """GET con reintentos y backoff. Devuelve None si agota intentos o 404."""
+    for intento in range(retries):
+        try:
+            req = urllib.request.Request(url, headers=HEADERS)
+            with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+                return resp.read()
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return None
+            log.warning("HTTP %s para %s (intento %s/%s)", e.code, url, intento + 1, retries)
+        except Exception as e:
+            log.warning("Error descargando %s: %s (intento %s/%s)", url, e, intento + 1, retries)
+        if intento < retries - 1:
+            time.sleep(2 * (intento + 1))
+    return None
+
+
+def download_file(url: str, dest: Path, force: bool = False) -> bool:
+    """Baja un archivo a dest. Salta si ya existe (salvo force=True)."""
+    if dest.exists() and not force:
+        return True
+
+    data = _fetch(url)
+    if data is None:
+        return False
+
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    with open(dest, "wb") as f:
+        f.write(data)
+
+    time.sleep(SLEEP_BETWEEN_REQUESTS)
+    return True
+
+
+# ------------------------------------------------------------------- calendario
+
+
+def get_schedule(year: int) -> list[dict]:
+    """Obtiene el calendario de la temporada desde la API estilo Ergast."""
+    url = f"https://api.jolpi.ca/ergast/f1/{year}.json"
+    data = _fetch(url)
+    if data is None:
+        log.error("No se pudo obtener el calendario de %s", year)
+        return []
+
+    try:
+        payload = json.loads(data)
+        races = payload["MRData"]["RaceTable"]["Races"]
+    except (KeyError, json.JSONDecodeError) as e:
+        log.error("Parseo fallido del calendario %s: %s", year, e)
+        return []
+
+    return [
+        {
+            "round": int(r["round"]),
+            "race_name": r["raceName"],
+        }
+        for r in races
+    ]
+
+
+# --------------------------------------------------------------- archive repo
+
+
+def download_gp_archive(year: int, race_name: str, force: bool = False) -> dict:
+    """Descarga los JSON de Archive para un GP."""
+    slug = slugify(race_name)
+    encoded_slug = quote(slug, safe="")
+    base_url = f"{RAW_BASE}/{ARCHIVE_REPO}/main/{year}/{encoded_slug}"
+    dest_dir = BRONZE_ERGAST / str(year) / slug
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    ok_count, missing_count = 0, 0
+    for fname in ARCHIVE_FILES:
+        url = f"{base_url}/{fname}"
+        dest = dest_dir / fname
+        if download_file(url, dest, force=force):
+            ok_count += 1
+        else:
+            missing_count += 1
+            log.debug("No se encontro %s/%s/%s", year, slug, fname)
+
+    return {
+        "dest_dir": str(dest_dir),
+        "downloaded": ok_count,
+        "missing": missing_count,
+    }
+
+
+# --------------------------------------------------------------- fastf1 repo
+
+
+def _fastf1_session_url(year: int, race_name: str, session: str, path: str) -> str:
+    """Arma la URL raw de GitHub para un archivo de una sesion FastF1."""
+    repo = TRACING_REPO_TEMPLATE.format(year=year)
+    return (
+        f"{RAW_BASE}/{repo}/main/"
+        f"{quote(race_name, safe='')}/"
+        f"{quote(session, safe='')}/"
+        f"{path}"
+    )
+
+
+def filter_session_laps(session_path: Path) -> tuple[dict[str, dict], list[dict]]:
+    """Lee session_laptimes.json y filtra vueltas validas.
+
+    Devuelve:
+      - vueltas_abs: dict {driver: vuelta_mas_rapida} por piloto (cualquier compuesto)
+      - vueltas_medium: lista de dicts con todas las vueltas MEDIUM filtradas
+    """
+    if not session_path.exists():
+        return {}, []
+
+    try:
+        with open(session_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except json.JSONDecodeError:
+        return {}, []
+
+    laps = valid_laps(data)
+    if not laps:
+        return {}, []
+
+    filtered = filter_outliers(laps)
+
+    # Vuelta mas rapida por piloto (cualquier compuesto)
+    vueltas_abs = {}
+    by_driver = defaultdict(list)
+    for l in filtered:
+        by_driver[l["driver"]].append(l)
+
+    for driver, driver_laps in by_driver.items():
+        vueltas_abs[driver] = min(driver_laps, key=lambda x: x["time"])
+
+    # Todas las vueltas MEDIUM que pasaron los filtros
+    vueltas_medium = [l for l in filtered if l["compound"] == "MEDIUM"]
+
+    return vueltas_abs, vueltas_medium
+
+
+def download_telemetry_laps(
+    year: int, race_name: str, session: str,
+    laps_to_download: list[dict], force: bool = False
+) -> dict:
+    """Descarga tel.json para una lista de vueltas."""
+    slug = slugify(race_name)
+    downloaded, skipped, missing = 0, 0, 0
+
+    for lap_info in laps_to_download:
+        driver = lap_info["driver"]
+        lap_num = lap_info["lap"]
+        if driver is None or lap_num is None:
+            continue
+
+        session_dir = BRONZE_FASTF1 / str(year) / slug / session
+        driver_dir = session_dir / driver
+        driver_dir.mkdir(parents=True, exist_ok=True)
+
+        fname = f"{lap_num}_tel.json"
+        dest = driver_dir / fname
+
+        if dest.exists() and not force:
+            skipped += 1
+            continue
+
+        url = _fastf1_session_url(year, race_name, session, f"{driver}/{fname}")
+        if download_file(url, dest, force=force):
+            downloaded += 1
+        else:
+            missing += 1
+
+    return {"downloaded": downloaded, "skipped": skipped, "missing": missing}
+
+
+def download_gp_fastf1(year: int, race_name: str, force: bool = False) -> dict:
+    """Descarga metadata + tel.json selectivos (absoluta + MEDIUM)."""
+    slug = slugify(race_name)
+    files_downloaded, files_missing = 0, 0
+    sessions_ok = 0
+    tel_downloaded, tel_skipped, tel_missing = 0, 0, 0
+
+    for session in FASTF1_SESSIONS:
+        session_dir = BRONZE_FASTF1 / str(year) / slug / session
+        session_dir.mkdir(parents=True, exist_ok=True)
+
+        # Solo estos dos archivos son necesarios para procesar vueltas.
+        session_ok = True
+        for fname in ("session_laptimes.json", "drivers.json"):
+            url = _fastf1_session_url(year, race_name, session, fname)
+            dest = session_dir / fname
+            if download_file(url, dest, force=force):
+                files_downloaded += 1
+            else:
+                files_missing += 1
+                session_ok = False
+
+        if not session_ok:
+            continue
+
+        sessions_ok += 1
+
+        # Filtrar vueltas y descargar tel.json necesarios
+        laptimes_path = session_dir / "session_laptimes.json"
+        vueltas_abs, vueltas_medium = filter_session_laps(laptimes_path)
+
+        # Deduplicar por (driver, lap): la vuelta más rápida puede ser MEDIUM.
+        laps_to_download = list(vueltas_abs.values())
+        laps_to_download.extend(vueltas_medium)
+        seen = set()
+        unique = []
+        for lap in laps_to_download:
+            key = (lap["driver"], lap["lap"])
+            if key in seen:
+                continue
+            seen.add(key)
+            unique.append(lap)
+        laps_to_download = unique
+
+        if laps_to_download:
+            tel_res = download_telemetry_laps(
+                year, race_name, session, laps_to_download, force=force
+            )
+            tel_downloaded += tel_res["downloaded"]
+            tel_skipped += tel_res["skipped"]
+            tel_missing += tel_res["missing"]
+
+    return {
+        "sessions": sessions_ok,
+        "files_downloaded": files_downloaded,
+        "files_missing": files_missing,
+        "tel_downloaded": tel_downloaded,
+        "tel_skipped": tel_skipped,
+        "tel_missing": tel_missing,
+    }
+
+
+# --------------------------------------------------------------------- manifest
+
+
+def write_manifest(dest_dir: Path, year: int, round_num: int, gp_slug: str) -> None:
+    """Escribe manifest.json con la metadata minima del GP."""
+    manifest = {
+        "year": year,
+        "round": round_num,
+        "gp_slug": gp_slug,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    manifest_path = dest_dir / "manifest.json"
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2, ensure_ascii=False)
+
+
+# ------------------------------------------------------------------- single gp
+
+
+def process_single_gp(
+    year: int, round_num: int, race_name: str, force: bool = False
+) -> dict:
+    """Procesa UN GP completo. Funcion pura, lista para convertir en @task."""
+    slug = slugify(race_name)
+    log.info("GP %s (%s) - %s", round_num, slug, race_name)
+
+    # Archive (resultados, quali y standings)
+    archive_res = download_gp_archive(year, race_name, force=force)
+    log.info("  Archive: %s descargados, %s faltantes", archive_res["downloaded"], archive_res["missing"])
+
+    # FastF1 metadata + telemetria de practicas (2018+)
+    use_fastf1 = year >= 2018
+    fastf1_res = {"sessions": 0, "files_downloaded": 0, "files_missing": 0, "tel_downloaded": 0, "tel_skipped": 0, "tel_missing": 0}
+    if use_fastf1:
+        fastf1_res = download_gp_fastf1(year, race_name, force=force)
+        log.info(
+            "  FastF1: %s sesiones, %s metadata descargados (%s faltantes), %s tel descargados (%s skip, %s miss)",
+            fastf1_res["sessions"],
+            fastf1_res["files_downloaded"],
+            fastf1_res["files_missing"],
+            fastf1_res["tel_downloaded"],
+            fastf1_res["tel_skipped"],
+            fastf1_res["tel_missing"],
+        )
+
+    # Manifest
+    dest_dir = BRONZE_FASTF1 / str(year) / slug if use_fastf1 else BRONZE_ERGAST / str(year) / slug
+    write_manifest(dest_dir, year, round_num, slug)
+
+    return {"slug": slug}
