@@ -6,3 +6,9 @@ __pycache__/
 .streamlit/secrets.toml
 # notebook ejecutado por build_app.py (grande; se regenera)
 build/
+
+# Pipeline (Airflow): logs, plugins y datos generados se recrean al correrlo
+pipeline/logs/
+pipeline/plugins/
+pipeline/include/output/
+pipeline/.env

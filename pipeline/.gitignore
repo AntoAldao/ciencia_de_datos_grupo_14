@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Airflow logs
+logs/
+plugins/
+
+# Datos generados (se recrean con el pipeline)
+include/output/
+
+# Notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Configuración de opencode (no se versiona)
+.opencode/
+
+# Environment
+.env
+.venv
+env/
+venv/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

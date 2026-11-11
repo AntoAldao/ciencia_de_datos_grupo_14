@@ -19,7 +19,7 @@ que maneja el usuario. El detalle de lo que pide la consigna está en [docs/cons
 - Berridy, Ignacio
 - Gonzalez, Matías
 - Manucha, Juan Pablo 
-- Santibañes, Lucía
+- Santibañez, Lucía
 - Zalazar, Valentín
 
 ## Estructura del repositorio
