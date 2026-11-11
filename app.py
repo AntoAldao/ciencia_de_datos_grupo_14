@@ -24,7 +24,7 @@ df = cargar()
 # ----------------------------------------------------------------------------------------------
 # PORTADA: la pregunta, la idea central en una oración, tres números.
 # ----------------------------------------------------------------------------------------------
-st.title("TODO: la pregunta del proyecto")
+st.title("¿Se puede superar a la grilla de largada usando más datos?")
 st.subheader("Más datos le ganan a la grilla, pero los abandonos esconden gran parte de esa ventaja.")
 c1, c2, c3 = st.columns(3)
 c1.metric("Error del modelo contra la grilla (puestos, validación 2020–2025)", "3,29 vs 3,49")

@@ -17,7 +17,7 @@ Se marca con `[x]` a medida que se resuelve. Fecha de la exposición: **25 de no
 
 - [x] Oración central: *«Más datos le ganan a la grilla, pero los abandonos esconden gran parte de esa ventaja.»*
 - [x] Tres números que la sostienen (3,29 vs 3,49 · 10 % a 17 % · 1,73 vs 1,96)
-- [ ] Pregunta del proyecto como título de la app
+- [x] Pregunta del proyecto como título de la app
 - [ ] Los tres números calculados desde el código, no escritos a mano
 - [ ] Confirmar los tres números contra la salida del notebook
 
