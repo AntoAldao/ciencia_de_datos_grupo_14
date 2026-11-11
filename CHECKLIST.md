@@ -23,7 +23,7 @@ Se marca con `[x]` a medida que se resuelve. Fecha de la exposición: **25 de no
 
 ## 2. Tallo – Los datos (cierra la Entrega 1)
 
-- [ ] Título que afirma algo de los datos
+- [x] Título que afirma algo de los datos
 - [ ] Gráfico en Altair que lo prueba
 - [ ] Unas pocas líneas que dicen qué mirar en el gráfico
 - [ ] «Cómo lo sabemos» (cerrado por defecto) con:

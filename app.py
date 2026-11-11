@@ -36,7 +36,8 @@ st.divider()
 # ----------------------------------------------------------------------------------------------
 # TALLO: cada sección = título que afirma + gráfico + «Cómo lo sabemos» (cerrado por defecto).
 # ----------------------------------------------------------------------------------------------
-st.header("1. TODO: título que afirma algo de los datos")
+st.header("Cada fila es un piloto en un Gran Premio: 186 carreras, nueve temporadas y 59 columnas, "
+          "pero solo 8 variables tienen algo que decir.")
 filas_por_anio = df.groupby("Year").size().reset_index(name="filas")
 st.altair_chart(
     alt.Chart(filas_por_anio).mark_bar().encode(
