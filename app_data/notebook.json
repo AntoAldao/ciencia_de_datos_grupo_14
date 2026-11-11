@@ -1,0 +1,760 @@
+{
+  "Limpieza aplicada": {
+    "columnas": [
+      "",
+      "Cantidad"
+    ],
+    "filas": [
+      [
+        "Filas del dataset original",
+        "3842"
+      ],
+      [
+        "Rondas eliminadas por duplicados",
+        "2"
+      ],
+      [
+        "Filas eliminadas con esas rondas",
+        "50"
+      ],
+      [
+        "Q_GridPosition: ceros pasados a nulo",
+        "0"
+      ],
+      [
+        "Filas sin dato de RACE_Finished",
+        "0"
+      ],
+      [
+        "Filas que no terminaron (abandonos)",
+        "561"
+      ],
+      [
+        "Filas del dataset limpio",
+        "3792"
+      ]
+    ]
+  },
+  "Partición entrenamiento / validación / test": {
+    "columnas": [
+      "",
+      "Temporadas",
+      "Carreras",
+      "Filas",
+      "Para qué"
+    ],
+    "filas": [
+      [
+        "Entrenamiento y validación",
+        "2018–2025",
+        "171",
+        "3418",
+        "Validación cruzada: cada temporada se valida con todas las demás"
+      ],
+      [
+        "temporadas que se validan",
+        "2020–2025",
+        "129",
+        "2578",
+        "Elegir modelo, hiperparámetros y columnas"
+      ],
+      [
+        "Entrenamiento del modelo final",
+        "2018–2025",
+        "171",
+        "3418",
+        "Ajustar el modelo elegido"
+      ],
+      [
+        "Test",
+        "2026",
+        "17",
+        "374",
+        "Medir una sola vez el modelo final"
+      ]
+    ]
+  },
+  "Piso y referencia (validación cruzada por temporada)": {
+    "columnas": [
+      "",
+      "MAE · media",
+      "MAE · desvío",
+      "MAE · 2025",
+      "MAE sin abandonos",
+      "RMSE (puestos)",
+      "RMSE sin abandonos",
+      "Mediana del error absoluto",
+      "Acierto ±2 puestos (%)",
+      "Spearman por carrera",
+      "Acierto zona de puntos (%)",
+      "Acierto podio (%)",
+      "Acierto ganador (%)"
+    ],
+    "filas": [
+      [
+        "Piso: Dummy (media)",
+        "4,996",
+        "0,006",
+        "4,989",
+        "4,361",
+        "5,762",
+        "5,059",
+        "5,000",
+        "20,085",
+        "—",
+        "52,632",
+        "—",
+        "—"
+      ],
+      [
+        "Referencia: grilla sola",
+        "3,493",
+        "0,403",
+        "3,359",
+        "2,460",
+        "4,988",
+        "3,535",
+        "2,500",
+        "51,740",
+        "0,622",
+        "76,833",
+        "67,672",
+        "55,333"
+      ]
+    ]
+  },
+  "Todos los modelos ajustados (validación cruzada por temporada)": {
+    "columnas": [
+      "",
+      "MAE · media sin ajustar",
+      "MAE · media",
+      "MAE · desvío",
+      "MAE · 2025",
+      "MAE sin abandonos",
+      "RMSE (puestos)",
+      "RMSE sin abandonos",
+      "Mediana del error absoluto",
+      "Acierto ±2 puestos (%)",
+      "Spearman por carrera",
+      "Acierto zona de puntos (%)",
+      "Acierto podio (%)",
+      "Acierto ganador (%)"
+    ],
+    "filas": [
+      [
+        "Zonas de grilla solapadas",
+        "3,313",
+        "3,302",
+        "0,362",
+        "3,220",
+        "2,179",
+        "4,721",
+        "3,121",
+        "2,167",
+        "53,773",
+        "0,661",
+        "78,366",
+        "67,407",
+        "56,487"
+      ],
+      [
+        "Lineal",
+        "3,335",
+        "3,303",
+        "0,354",
+        "3,307",
+        "2,202",
+        "4,696",
+        "3,117",
+        "2,333",
+        "53,027",
+        "0,665",
+        "78,028",
+        "66,002",
+        "58,449"
+      ],
+      [
+        "Promedio lineal + bosque",
+        "3,328",
+        "3,311",
+        "0,344",
+        "3,294",
+        "2,183",
+        "4,705",
+        "3,107",
+        "2,333",
+        "53,194",
+        "0,664",
+        "78,146",
+        "67,014",
+        "54,441"
+      ],
+      [
+        "Bosque",
+        "3,340",
+        "3,331",
+        "0,300",
+        "3,281",
+        "2,189",
+        "4,729",
+        "3,126",
+        "2,167",
+        "52,710",
+        "0,660",
+        "78,070",
+        "66,517",
+        "52,705"
+      ],
+      [
+        "Boosting",
+        "3,496",
+        "3,354",
+        "0,322",
+        "3,394",
+        "2,233",
+        "4,764",
+        "3,174",
+        "2,167",
+        "51,972",
+        "0,655",
+        "78,218",
+        "66,400",
+        "46,670"
+      ],
+      [
+        "Ranking por carrera",
+        "3,521",
+        "3,376",
+        "0,321",
+        "3,407",
+        "2,244",
+        "4,773",
+        "3,172",
+        "2,167",
+        "51,632",
+        "0,654",
+        "78,313",
+        "66,920",
+        "42,668"
+      ],
+      [
+        "Árbol",
+        "3,462",
+        "3,390",
+        "0,369",
+        "3,427",
+        "2,322",
+        "4,772",
+        "3,251",
+        "2,500",
+        "48,055",
+        "0,651",
+        "78,367",
+        "66,652",
+        "62,174"
+      ],
+      [
+        "Referencia: grilla sola",
+        "3,493",
+        "3,493",
+        "0,403",
+        "3,359",
+        "2,460",
+        "4,988",
+        "3,535",
+        "2,500",
+        "51,740",
+        "0,622",
+        "76,833",
+        "67,672",
+        "55,333"
+      ]
+    ]
+  },
+  "Lineal (elegido): todas las combinaciones de la grilla (9)": {
+    "columnas": [
+      "",
+      "alpha",
+      "MAE · media",
+      "MAE · desvío",
+      "MAE · 2025",
+      "MAE sin abandonos",
+      "RMSE · media",
+      "Spearman · media"
+    ],
+    "filas": [
+      [
+        "1",
+        "1000,0000",
+        "3,3033",
+        "0,3538",
+        "3,3072",
+        "2,2015",
+        "4,6957",
+        "0,6650"
+      ],
+      [
+        "2",
+        "3000,0000",
+        "3,3045",
+        "0,3489",
+        "3,2810",
+        "2,2009",
+        "4,6960",
+        "0,6650"
+      ],
+      [
+        "3",
+        "300,0000",
+        "3,3206",
+        "0,3645",
+        "3,3072",
+        "2,2237",
+        "4,7273",
+        "0,6604"
+      ],
+      [
+        "4",
+        "100,0000",
+        "3,3299",
+        "0,3600",
+        "3,3246",
+        "2,2384",
+        "4,7413",
+        "0,6584"
+      ],
+      [
+        "5",
+        "10,0000",
+        "3,3319",
+        "0,3590",
+        "3,3246",
+        "2,2399",
+        "4,7469",
+        "0,6575"
+      ],
+      [
+        "6",
+        "1,0000",
+        "3,3342",
+        "0,3602",
+        "3,3333",
+        "2,2424",
+        "4,7487",
+        "0,6573"
+      ],
+      [
+        "7",
+        "0,0100",
+        "3,3350",
+        "0,3610",
+        "3,3333",
+        "2,2413",
+        "4,7487",
+        "0,6573"
+      ],
+      [
+        "8",
+        "10000,0000",
+        "3,3386",
+        "0,3477",
+        "3,3377",
+        "2,2373",
+        "4,7236",
+        "0,6611"
+      ],
+      [
+        "9",
+        "100000,0000",
+        "3,3618",
+        "0,3379",
+        "3,3508",
+        "2,2738",
+        "4,7556",
+        "0,6567"
+      ]
+    ]
+  },
+  "Test 2026 (17 carreras, 374 filas)": {
+    "columnas": [
+      "",
+      "MAE (puestos)",
+      "RMSE (puestos)",
+      "Mediana del error absoluto",
+      "Acierto ±2 puestos (%)",
+      "Spearman por carrera",
+      "Acierto zona de puntos (%)",
+      "Acierto podio (%)",
+      "Acierto ganador (%)",
+      "MAE sin abandonos",
+      "RMSE sin abandonos"
+    ],
+    "filas": [
+      [
+        "Piso: Dummy (media)",
+        "5,500",
+        "6,344",
+        "5,500",
+        "18,182",
+        "—",
+        "—",
+        "—",
+        "—",
+        "4,385",
+        "5,087"
+      ],
+      [
+        "Referencia: grilla sola",
+        "3,497",
+        "5,332",
+        "2,000",
+        "56,417",
+        "0,647",
+        "74,118",
+        "62,745",
+        "70,588",
+        "2,034",
+        "3,077"
+      ],
+      [
+        "Modelo final (Lineal)",
+        "3,449",
+        "5,053",
+        "2,000",
+        "53,476",
+        "0,683",
+        "76,471",
+        "64,706",
+        "47,059",
+        "1,797",
+        "2,581"
+      ]
+    ]
+  },
+  "Error por tramo (sesgo = predicho − real; positivo = lo pone más atrás)": {
+    "columnas": [
+      "",
+      "",
+      "n",
+      "MAE",
+      "sesgo"
+    ],
+    "filas": [
+      [
+        "Corte",
+        "Franja",
+        "",
+        "",
+        ""
+      ],
+      [
+        "Según el puesto real",
+        "1–5",
+        "85",
+        "1,72",
+        "1,04"
+      ],
+      [
+        "6–10",
+        "85",
+        "3,32",
+        "2,45"
+      ],
+      [
+        "11–15",
+        "85",
+        "3,00",
+        "0,95"
+      ],
+      [
+        "16–22",
+        "119",
+        "5,10",
+        "-3,17"
+      ],
+      [
+        "Según la grilla",
+        "1–5",
+        "85",
+        "4,13",
+        "-2,58"
+      ],
+      [
+        "6–10",
+        "85",
+        "3,60",
+        "-1,46"
+      ],
+      [
+        "11–15",
+        "85",
+        "2,92",
+        "1,06"
+      ],
+      [
+        "16–22",
+        "119",
+        "3,24",
+        "2,13"
+      ]
+    ]
+  },
+  "Peso de los abandonos en el error del test 2026": {
+    "columnas": [
+      "",
+      "Abandonos (no terminaron)",
+      "Largaron 1–10 y terminaron 18.º o peor",
+      "Resto de las filas"
+    ],
+    "filas": [
+      [
+        "Filas",
+        "78,0",
+        "22,0",
+        "296,0"
+      ],
+      [
+        "% de las filas",
+        "20,9",
+        "5,9",
+        "79,1"
+      ],
+      [
+        "% del error absoluto total que explican",
+        "39,7",
+        "24,0",
+        "60,3"
+      ],
+      [
+        "MAE de esas filas",
+        "6,6",
+        "14,1",
+        "2,6"
+      ]
+    ]
+  },
+  "Anticipar abandonos con las columnas previas a la carrera (AUC medio 0,573)": {
+    "columnas": [
+      "",
+      "% que abandona",
+      "AUC · todos",
+      "AUC · largan 1–10"
+    ],
+    "filas": [
+      [
+        "valida 2020",
+        "16,765",
+        "0,587",
+        "0,618"
+      ],
+      [
+        "valida 2021",
+        "13,182",
+        "0,538",
+        "0,413"
+      ],
+      [
+        "valida 2022",
+        "16,818",
+        "0,531",
+        "0,529"
+      ],
+      [
+        "valida 2023",
+        "11,905",
+        "0,562",
+        "0,587"
+      ],
+      [
+        "valida 2024",
+        "10,021",
+        "0,647",
+        "0,679"
+      ],
+      [
+        "valida 2025",
+        "12,200",
+        "0,572",
+        "0,575"
+      ]
+    ]
+  },
+  "Coeficientes del modelo final (columnas escaladas)": {
+    "columnas": [
+      "",
+      "Coeficiente",
+      "Signo"
+    ],
+    "filas": [
+      [
+        "Q_GridPosition",
+        "0,0798",
+        "empuja hacia atrás"
+      ],
+      [
+        "DriverPoints_Before_DBT_%",
+        "0,0633",
+        "empuja hacia atrás"
+      ],
+      [
+        "Q_Best_seconds_DBT_%",
+        "0,0354",
+        "empuja hacia atrás"
+      ],
+      [
+        "FP_LapTime_min_SOFT_DBT_%",
+        "0,0157",
+        "empuja hacia atrás"
+      ],
+      [
+        "FP_LapTime_min_MED_DBT_%",
+        "0,0129",
+        "empuja hacia atrás"
+      ],
+      [
+        "FP_LapTime_min_SOFT_DBT_% × FP_Desgaste_SOFT",
+        "0,0072",
+        "empuja hacia atrás"
+      ],
+      [
+        "FP_LapTime_min_MED_DBT_% × FP_Desgaste_MED",
+        "0,0068",
+        "empuja hacia atrás"
+      ],
+      [
+        "FP_LapTime_min_HARD_DBT_%",
+        "0,0060",
+        "empuja hacia atrás"
+      ],
+      [
+        "FP_Desgaste_SOFT",
+        "-0,0058",
+        "empuja hacia adelante"
+      ],
+      [
+        "missingindicator_DriverPoints_Before_DBT_%",
+        "-0,0047",
+        "empuja hacia adelante"
+      ],
+      [
+        "missingindicator_Q_Best_seconds_DBT_%",
+        "-0,0040",
+        "empuja hacia adelante"
+      ],
+      [
+        "FP_Desgaste_MED",
+        "-0,0035",
+        "empuja hacia adelante"
+      ],
+      [
+        "missingindicator_FP_Desgaste_SOFT",
+        "-0,0018",
+        "empuja hacia adelante"
+      ],
+      [
+        "missingindicator_FP_LapTime_min_SOFT_DBT_%",
+        "-0,0018",
+        "empuja hacia adelante"
+      ],
+      [
+        "missingindicator_FP_LapTime_min_HARD_DBT_%",
+        "0,0009",
+        "empuja hacia atrás"
+      ],
+      [
+        "missingindicator_FP_LapTime_min_MED_DBT_%",
+        "0,0002",
+        "empuja hacia atrás"
+      ],
+      [
+        "missingindicator_FP_Desgaste_MED",
+        "0,0002",
+        "empuja hacia atrás"
+      ]
+    ]
+  },
+  "Chequeo de fuga en las columnas que más pesan": {
+    "columnas": [
+      "",
+      "Valor"
+    ],
+    "filas": [
+      [
+        "Primera fecha: % de filas sin DriverPoints_Before_DBT_%",
+        "100,00"
+      ],
+      [
+        "Primera fecha: DriverPoints_Before máximo",
+        "0,00"
+      ],
+      [
+        "Fechas consecutivas en que los puntos acumulados bajan",
+        "1"
+      ],
+      [
+        "Fechas consecutivas revisadas",
+        "3596"
+      ],
+      [
+        "¿Alguna columna de resultado entre las entradas del modelo?",
+        "no"
+      ],
+      [
+        "Spearman puntos al líder (antes) ~ resultado",
+        "0,59"
+      ],
+      [
+        "Spearman grilla ~ resultado",
+        "0,62"
+      ]
+    ]
+  },
+  "Resumen en números": {
+    "columnas": [
+      "",
+      "Valor"
+    ],
+    "filas": [
+      [
+        "Modelo elegido",
+        "Lineal (alpha=1000)"
+      ],
+      [
+        "MAE validación cruzada · piso",
+        "5,00"
+      ],
+      [
+        "MAE validación cruzada · grilla",
+        "3,49"
+      ],
+      [
+        "MAE validación cruzada · modelo",
+        "3,30"
+      ],
+      [
+        "MAE test · piso",
+        "5,50"
+      ],
+      [
+        "MAE test · grilla",
+        "3,50"
+      ],
+      [
+        "MAE test · modelo",
+        "3,45"
+      ],
+      [
+        "MAE test sin abandonos · grilla",
+        "2,03"
+      ],
+      [
+        "MAE test sin abandonos · modelo",
+        "1,80"
+      ],
+      [
+        "AUC para anticipar abandonos (validación cruzada)",
+        "0,57"
+      ]
+    ]
+  }
+}

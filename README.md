@@ -26,9 +26,14 @@ que maneja el usuario. El detalle de lo que pide la consigna está en [docs/cons
 
 ```
 ciencia_de_datos_grupo_14/
-├── app.py                # La aplicación (Streamlit, esqueleto inicial)
+├── app.py                # La aplicación (Streamlit): lee app_data/ y el modelo
+├── build_app.py          # Datos del pipeline -> notebook de la Entrega 3 -> app_data/
+├── modelo_entrega3.py    # Clases del notebook de la Entrega 3 + cargar el modelo y predecir
+├── graficos/             # Gráficos de la app (Altair)
+├── app_data/             # Generado por build_app.py: predicciones, aportes y resumen
+├── modelos/              # Modelo que guarda el notebook de la Entrega 3 (joblib)
 ├── requirements.txt      # Dependencias
-├── data/                 # Dataset que produce el pipeline
+├── data/                 # Datos que produce el pipeline (f1_all_full.parquet; v2 = versión anterior)
 ├── notebooks/            # Entrega 2 (EDA) y Entrega 3 (modelado)
 ├── docs/consigna.md      # Qué hay que hacer en la Entrega 4
 └── CONTRIBUTING.md       # Cómo trabajar con ramas
@@ -49,6 +54,22 @@ streamlit run app.py
 ```
 
 Se abre en <http://localhost:8501>.
+
+## Cómo se regenera la aplicación
+
+La app no entrena nada: muestra lo que deja `build_app.py` en `app_data/` y usa el modelo que
+guarda el notebook de la Entrega 3 en `modelos/`. Si cambian los datos del pipeline:
+
+```powershell
+# 1. reemplazar data/f1_all_full.parquet por la nueva salida del pipeline
+python build_app.py --entrenar             # 2. ejecuta el notebook de la Entrega 3 y regenera todo
+streamlit run app.py                       # 3. mirar que esté bien, y commitear app_data/ y modelos/
+```
+
+`build_app.py --entrenar` ejecuta el notebook **tal cual** (en una carpeta temporal, con los datos
+nuevos): elige el modelo, lo entrena con 2018-2025 (semilla 14), lo mide en el test (2026) y lo
+guarda. El notebook ejecutado queda en `build/Entrega_3_ejecutada.ipynb`, para comparar sus números
+con los de la app. Sin `--entrenar`, usa el modelo ya guardado y solo recalcula `app_data/`.
 
 ## Cómo trabajar en equipo
 

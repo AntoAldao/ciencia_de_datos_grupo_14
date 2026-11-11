@@ -2,5 +2,14 @@ streamlit
 altair
 pandas
 pyarrow
-scikit-learn
+numpy
+# misma versión con la que el notebook guarda el modelo (joblib): si no, puede no cargar
+scikit-learn==1.9.1
 joblib
+# para build_app.py --entrenar (ejecuta el notebook de la Entrega 3)
+nbformat
+nbclient
+ipykernel
+matplotlib
+seaborn
+lightgbm

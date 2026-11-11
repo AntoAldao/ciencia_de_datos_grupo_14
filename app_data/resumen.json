@@ -1,0 +1,92 @@
+{
+  "datos": {
+    "archivo": "data/f1_all_full.parquet",
+    "pasos": [
+      {
+        "paso": "Crudo del pipeline",
+        "filas": 3842
+      },
+      {
+        "paso": "Sin rondas con filas duplicadas (2023-R11, 2025-R16)",
+        "filas": 3792
+      },
+      {
+        "paso": "Grilla en 0 pasada a faltante (0 filas)",
+        "filas": 3792
+      }
+    ],
+    "al_dia": "2026, fecha 17"
+  },
+  "modelo": {
+    "elegido": "Lineal",
+    "semilla": 14,
+    "hiperparametros": {
+      "modelo": "Ridge(alpha=1000)",
+      "modelo__alpha": "1000"
+    },
+    "entrada": [
+      "Q_GridPosition",
+      "Q_Best_seconds_DBT_%",
+      "DriverPoints_Before_DBT_%",
+      "FP_LapTime_min_SOFT_DBT_%",
+      "FP_LapTime_min_MED_DBT_%",
+      "FP_LapTime_min_HARD_DBT_%",
+      "FP_LapTime_min_SOFT_ABS",
+      "FP_LapTime_mean_SOFT_ABS",
+      "FP_LapTime_min_MED_ABS",
+      "FP_LapTime_mean_MED_ABS"
+    ],
+    "rangos": {
+      "Q_GridPosition": [
+        1.0,
+        20.0
+      ],
+      "Q_Best_seconds_DBT_%": [
+        0.0,
+        45.595649464680214
+      ],
+      "DriverPoints_Before_DBT_%": [
+        0.0,
+        100.0
+      ],
+      "FP_LapTime_min_SOFT_DBT_%": [
+        0.0,
+        31.099550195244902
+      ],
+      "FP_LapTime_min_MED_DBT_%": [
+        0.0,
+        26.487302432960398
+      ],
+      "FP_LapTime_min_HARD_DBT_%": [
+        0.0,
+        30.626545754328127
+      ],
+      "FP_LapTime_min_SOFT_ABS": [
+        54.064,
+        116.745
+      ],
+      "FP_LapTime_mean_SOFT_ABS": [
+        54.849666666666664,
+        121.58866666666665
+      ],
+      "FP_LapTime_min_MED_ABS": [
+        54.629,
+        115.358
+      ],
+      "FP_LapTime_mean_MED_ABS": [
+        55.571749999999994,
+        121.964
+      ]
+    }
+  },
+  "test": {
+    "carreras": 17,
+    "filas": 374,
+    "mae_modelo": 3.449197860962567,
+    "mae_modelo_sin_abandonos": 1.7972972972972974,
+    "mae_grilla": 3.4973262032085564,
+    "mae_grilla_sin_abandonos": 2.0337837837837838,
+    "mae_piso": 5.5,
+    "mae_piso_sin_abandonos": 4.385135135135135
+  }
+}
