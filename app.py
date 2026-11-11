@@ -25,11 +25,11 @@ df = cargar()
 # PORTADA: la pregunta, la idea central en una oración, tres números.
 # ----------------------------------------------------------------------------------------------
 st.title("TODO: la pregunta del proyecto")
-st.subheader("TODO: idea central en una oración con sujeto y verbo (la de la Entrega 3)")
+st.subheader("Más datos le ganan a la grilla, pero los abandonos esconden gran parte de esa ventaja.")
 c1, c2, c3 = st.columns(3)
-c1.metric("TODO número 1", "—")
-c2.metric("TODO número 2", "—")
-c3.metric("TODO número 3", "—")
+c1.metric("Error del modelo contra la grilla (puestos, validación 2020–2025)", "3,29 vs 3,49")
+c2.metric("Filas en las que el piloto abandona (según la temporada)", "10 % a 17 %")
+c3.metric("Error sin contar abandonos (modelo vs grilla)", "1,73 vs 1,96")
 
 st.divider()
 
