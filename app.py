@@ -9,6 +9,8 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+from graficos import grafico_columnas
+
 ARCHIVO = "data/f1_all_full_v2.parquet"
 
 st.set_page_config(page_title="F1 – Grupo 14", layout="wide")
@@ -38,15 +40,13 @@ st.divider()
 # ----------------------------------------------------------------------------------------------
 st.header("Cada fila es un piloto en un Gran Premio: 186 carreras, nueve temporadas y 59 columnas, "
           "pero solo 8 variables tienen algo que decir.")
-filas_por_anio = df.groupby("Year").size().reset_index(name="filas")
-st.altair_chart(
-    alt.Chart(filas_por_anio).mark_bar().encode(
-        x=alt.X("Year:O", title="Temporada"),
-        y=alt.Y("filas:Q", title="Filas (piloto en un GP)"),
-    ),
-    use_container_width=True,
+st.altair_chart(grafico_columnas(df.columns), use_container_width=True)
+st.write(
+    "Cada barra es un motivo y termina en un neumático con la cantidad de columnas que cayó ahí. "
+    "En rojo, lo que entra al modelo; en amarillo, lo que se quiere adivinar; en gris, lo que se descarta. "
+    "Mirá cuánto pesa lo gris: la telemetría sola son 18 columnas y no aportó nada una vez que se conoce "
+    "la grilla. A las 6 rojas el modelo les suma 2 variables calculadas: el desgaste de SOFT y de MED."
 )
-st.write("TODO: qué mirar en el gráfico.")
 with st.expander("Cómo lo sabemos"):
     st.markdown(
         "- TODO: de dónde salen los datos (pipeline) y fecha\n"
