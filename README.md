@@ -18,7 +18,7 @@ que maneja el usuario. El detalle de lo que pide la consigna está en [docs/cons
 - Bataller, Paulina
 - Berridy, Ignacio
 - Gonzalez, Matías
-- Manucha, Juan Pablo
+- Manucha, Juan Pablo 
 - Santibañes, Lucía
 - Zalazar, Valentín
 
