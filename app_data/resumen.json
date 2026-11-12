@@ -1,6 +1,6 @@
 {
   "datos": {
-    "archivo": "data/f1_all_full.parquet",
+    "archivo": "data\\f1_all_full.parquet",
     "pasos": [
       {
         "paso": "Crudo del pipeline",
@@ -77,6 +77,60 @@
         55.571749999999994,
         121.964
       ]
+    },
+    "habituales": {
+      "Q_GridPosition": [
+        1.0,
+        20.0
+      ],
+      "Q_Best_seconds_DBT_%": [
+        0.0,
+        10.85980204301054
+      ],
+      "DriverPoints_Before_DBT_%": [
+        0.0,
+        100.0
+      ],
+      "FP_LapTime_min_SOFT_DBT_%": [
+        0.0,
+        5.78452221759622
+      ],
+      "FP_LapTime_min_MED_DBT_%": [
+        0.0,
+        7.3213197920832656
+      ],
+      "FP_LapTime_min_HARD_DBT_%": [
+        0.0,
+        7.618119272912576
+      ],
+      "FP_LapTime_min_SOFT_ABS": [
+        64.24748,
+        106.76984
+      ],
+      "FP_LapTime_mean_SOFT_ABS": [
+        64.87706,
+        109.1401980952381
+      ],
+      "FP_LapTime_min_MED_ABS": [
+        65.4014,
+        108.7586
+      ],
+      "FP_LapTime_mean_MED_ABS": [
+        65.83333999999999,
+        110.70642857142855
+      ]
+    },
+    "medianas": {
+      "Q_GridPosition": 11.0,
+      "Q_Best_seconds_DBT_%": 1.5516134946828009,
+      "DriverPoints_Before_DBT_%": 88.76372496281999,
+      "FP_LapTime_min_SOFT_DBT_%": 1.3818761626361922,
+      "FP_LapTime_min_MED_DBT_%": 1.6568062046335863,
+      "FP_LapTime_min_HARD_DBT_%": 1.5627246031582966,
+      "FP_LapTime_min_SOFT_ABS": 84.525,
+      "FP_LapTime_mean_SOFT_ABS": 86.06281818181819,
+      "FP_LapTime_min_MED_ABS": 85.265,
+      "FP_LapTime_mean_MED_ABS": 86.746
     }
   },
   "test": {

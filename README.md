@@ -71,6 +71,19 @@ nuevos): elige el modelo, lo entrena con 2018-2025 (semilla 14), lo mide en el t
 guarda. El notebook ejecutado queda en `build/Entrega_3_ejecutada.ipynb`, para comparar sus números
 con los de la app. Sin `--entrenar`, usa el modelo ya guardado y solo recalcula `app_data/`.
 
+Dos cosas que hace `build_app.py` además de predecir:
+
+- **Predicciones fuera de muestra.** En «Explorá», cada carrera de 2018-2025 la predice un modelo
+  que no la vio: una copia del modelo elegido (mismo pipeline e hiperparámetros) entrenada con las
+  demás temporadas, como en la validación cruzada del notebook. 2026 lo predice el modelo final.
+- **Verificación contra el notebook.** Al final compara el MAE del test (con y sin abandonos, modelo
+  y grilla) con la tabla del notebook ejecutado y corta con un error si no coinciden. Si cambian los
+  datos y no se volvió a correr el notebook, avisa.
+
+Después de `--entrenar`, copiar `build/Entrega_3_ejecutada.ipynb` a
+`notebooks/Entrega_3_Modelado_y_Validacion_F1_Grupo_14.ipynb` y commitearlo: es el notebook que
+tiene que coincidir con la app.
+
 ## Cómo trabajar en equipo
 
 Cada uno trabaja en su rama y se integra a `main` por pull request. Ver [CONTRIBUTING.md](CONTRIBUTING.md).

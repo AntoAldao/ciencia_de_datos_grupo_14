@@ -9,6 +9,7 @@ Correr:  streamlit run app.py
 import json
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 
@@ -203,8 +204,11 @@ with tab_explora:
     anios = sorted(df["Year"].unique(), reverse=True)
     anio = st.selectbox("Temporada", [int(a) for a in anios])
     if anio < ANIO_TEST:
-        st.caption(f"El modelo se entrenó con 2018-2025: en {anio} ya conocía estas carreras. "
-                   f"Lo que no vio es {ANIO_TEST}.")
+        st.caption(f"Cada carrera de {anio} la predice un modelo que no la vio: el mismo modelo "
+                   f"elegido, entrenado con las otras temporadas (la validación cruzada por "
+                   f"temporada del notebook).")
+    else:
+        st.caption(f"{ANIO_TEST} es el test: lo predice el modelo final, entrenado con 2018-2025.")
     tabla = tabla_temporada(df, anio)
     sub_campeonato, sub_autos, sub_porque = st.tabs(
         ["Campeonato", "Carrera por carrera", "Por qué el modelo mueve a cada piloto"])
@@ -224,30 +228,78 @@ with tab_explora:
 with tab_prueba:
     guardado = modelo()
     rangos = resumen["modelo"]["rangos"]
-    st.write("Elegí una carrera y un piloto y cambiá sus valores: el modelo lo vuelve a ordenar "
-             "contra los demás de esa carrera. Los campos solo aceptan valores dentro de lo que el "
-             "modelo vio al entrenar; vacío = sin dato (el modelo lo completa).")
+    habituales = resumen["modelo"].get("habituales", rangos)
+    medianas = resumen["modelo"].get("medianas", {})
+    st.write("Elegí una carrera y un piloto y cambiá lo que hizo antes de largar: el modelo le "
+             "vuelve a dar un puntaje y lo ordena contra los demás de esa carrera. Los controles "
+             "van del mínimo al máximo que vio el modelo al entrenar, así que no se puede cargar "
+             "un valor que nunca vio; si uno queda en el 1 % más raro de cada punta, la app avisa.")
     col_a, col_b = st.columns(2)
     carrera = col_a.selectbox("Carrera", sorted(df["Carrera"].unique(), reverse=True))
     autos = df[df["Carrera"] == carrera].reset_index(drop=True)
-    piloto = col_b.selectbox("Piloto", sorted(autos["DriverId"]))
+    piloto = col_b.selectbox("Piloto", sorted(autos["DriverId"]),
+                             format_func=lambda d: d.replace("_", " ").title())
     i = autos.index[autos["DriverId"] == piloto][0]
+    clave = f"{carrera}-{piloto}"
 
-    fuera = [c for c, (lo, hi) in rangos.items()
-             if pd.notna(autos.loc[i, c]) and not lo <= autos.loc[i, c] <= hi]
-    if fuera:
-        st.warning("Sus datos reales tienen valores que el modelo nunca vio al entrenar ("
-                   + ", ".join(ETIQUETAS.get(c, c) for c in fuera)
-                   + "): en los campos se recortan al rango visto.")
+    # Lo que se puede tocar. El desgaste se carga en % (como lo calcula el modelo) y se convierte
+    # a la vuelta promedio en segundos, que es lo que recibe el pipeline.
+    CONTROLES = [
+        ("Q_GridPosition", "Posición de largada", 1.0, "%.0f"),
+        ("Q_Best_seconds_DBT_%", "Clasificación: % más lenta que la mejor vuelta", 0.05, "%.2f"),
+        ("DriverPoints_Before_DBT_%", "Campeonato: % menos de puntos que el líder", 0.5, "%.1f"),
+        ("FP_LapTime_min_SOFT_DBT_%", "Prácticas con blanda: % más lenta que la mejor", 0.05, "%.2f"),
+        ("FP_LapTime_min_MED_DBT_%", "Prácticas con media: % más lenta que la mejor", 0.05, "%.2f"),
+        ("FP_LapTime_min_HARD_DBT_%", "Prácticas con dura: % más lenta que la mejor", 0.05, "%.2f"),
+        ("FP_Desgaste_SOFT", "Desgaste con blanda: vuelta promedio vs. mejor (%)", 0.05, "%.2f"),
+        ("FP_Desgaste_MED", "Desgaste con media: vuelta promedio vs. mejor (%)", 0.05, "%.2f"),
+    ]
+    entrena = df[df["conjunto"] == "entrenamiento"]
+    for goma in ("SOFT", "MED"):   # rangos del desgaste: los mismos criterios que las columnas
+        d = entrena[f"FP_Desgaste_{goma}"]
+        rangos.setdefault(f"FP_Desgaste_{goma}", [float(d.min()), float(d.max())])
+        habituales.setdefault(f"FP_Desgaste_{goma}", [float(d.quantile(.01)), float(d.quantile(.99))])
+        medianas.setdefault(f"FP_Desgaste_{goma}", float(d.median()))
 
     caso = autos.copy()
-    cols = st.columns(2)
-    for j, (col, (lo, hi)) in enumerate(rangos.items()):
+    valores, avisos = {}, []
+    for j, (col, etiqueta, paso, formato) in enumerate(CONTROLES):
+        if j % 2 == 0:   # de a dos por fila, para que queden alineados
+            cols = st.columns(2)
+        lo, hi = rangos[col]
+        h_lo, h_hi = habituales[col]
+        tope = hi if col == "Q_GridPosition" else min(hi, h_hi * 3)   # las colas de 90 % no sirven en un control
         actual = autos.loc[i, col]
-        caso.loc[i, col] = cols[j % 2].number_input(
-            ETIQUETAS.get(col, col), min_value=lo, max_value=hi,
-            value=None if pd.isna(actual) else float(min(max(actual, lo), hi)),
-            key=f"{carrera}-{piloto}-{col}")
+        with cols[j % 2]:
+            sin_dato = st.checkbox(f"Sin dato: {etiqueta.split(':')[0].lower()}", value=pd.isna(actual),
+                                   key=f"nd-{clave}-{col}",
+                                   help="El modelo completa los faltantes con la mediana del "
+                                        "entrenamiento y marca que faltaba.")
+            if sin_dato:
+                valores[col] = np.nan
+                continue
+            inicio = medianas.get(col, (lo + hi) / 2) if pd.isna(actual) else float(actual)
+            valores[col] = st.slider(etiqueta, float(lo), float(tope), float(np.clip(inicio, lo, tope)),
+                                     step=paso, format=formato, key=f"sl-{clave}-{col}")
+            if pd.notna(actual) and not lo <= actual <= tope:
+                avisos.append(f"**{etiqueta}**: su valor real ({actual:.2f}) está fuera de lo que "
+                              "permite el control; se recortó.")
+            elif not h_lo <= valores[col] <= h_hi:
+                avisos.append(f"**{etiqueta}** = {valores[col]:.2f}: fuera del 98 % central de lo que "
+                              f"vio el modelo ({h_lo:.2f} a {h_hi:.2f}). La predicción es menos confiable.")
+    if avisos:
+        st.warning("\n\n".join(avisos))
+
+    for col, v in valores.items():
+        if col.startswith("FP_Desgaste_"):
+            goma = col.removeprefix("FP_Desgaste_")
+            mejor = caso.loc[i, f"FP_LapTime_min_{goma}_ABS"]
+            if pd.isna(mejor):   # sin vuelta en segundos el modelo no puede calcular el desgaste
+                mejor = entrena[f"FP_LapTime_min_{goma}_ABS"].median()
+                caso.loc[i, f"FP_LapTime_min_{goma}_ABS"] = mejor
+            caso.loc[i, f"FP_LapTime_mean_{goma}_ABS"] = mejor * (1 + v / 100) if pd.notna(v) else np.nan
+        else:
+            caso.loc[i, col] = v
 
     antes = pd.Series(m3.puntaje(guardado, autos)).rank(method="first")
     despues_puntaje = pd.Series(m3.puntaje(guardado, caso))
@@ -255,5 +307,8 @@ with tab_prueba:
     k1, k2, k3 = st.columns(3)
     k1.metric("Puesto predicho con sus datos reales", int(antes[i]))
     k2.metric("Puesto predicho con tus valores", int(despues[i]),
-              delta=int(antes[i] - despues[i]), help="positivo = el modelo lo adelanta")
+              delta=int(antes[i] - despues[i]) or None, help="positivo = el modelo lo adelanta")
     k3.metric("Puntaje (0 = ganador, 1 = último)", fmt(despues_puntaje[i], 3))
+    st.caption(f"En la realidad terminó {int(autos.loc[i, 'Puesto'])}.º"
+               + (" (no terminó la carrera)" if autos.loc[i, "Terminó"] is False
+                  or str(autos.loc[i, "Terminó"]) == "False" else "") + ".")
