@@ -31,19 +31,14 @@ import altair as alt
 import numpy as np
 import pandas as pd
 
+from graficos import colores as C
+
 RACE_COLS = ["Year", "RoundNumber"]
 
 # Colores aproximados de cada escudería (identidad del equipo; los compañeros comparten color,
 # por eso cada auto lleva su sigla).
-TEAM_COLORS = {
-    "mclaren": "#FF8000", "ferrari": "#E8002D", "mercedes": "#27F4D2",
-    "red_bull": "#3671C6", "williams": "#64C4FF", "aston_martin": "#229971",
-    "alpine": "#0093CC", "haas": "#B6BABD", "rb": "#6692FF", "alphatauri": "#5E8FAA",
-    "toro_rosso": "#469BFF", "sauber": "#52E252", "alfa": "#C92D4B", "audi": "#F50537",
-    "cadillac": "#D4AF37", "renault": "#FFF500", "force_india": "#F596C8",
-    "racing_point": "#F596C8",
-}
-DEFAULT_COLOR = "#9AA0A6"
+TEAM_COLORS = C.ESCUDERIAS
+DEFAULT_COLOR = C.ESCUDERIA_DEFECTO
 
 # Siglas oficiales que no salen de las 3 primeras letras del apellido.
 DRIVER_CODES = {
@@ -52,10 +47,7 @@ DRIVER_CODES = {
 }
 
 # Paleta de la "pista" (tema oscuro fijo: es una escena, no un gráfico de fondo claro).
-ASPHALT = "#26282C"
-LANE = "#3A3D43"
-INK = "#E8EAED"
-INK_MUTED = "#9AA0A6"
+ASPHALT, LANE, INK, INK_MUTED = C.ASPHALT, C.LANE, C.INK, C.INK_MUTED
 DOUBT = "#FFD54A"
 
 # Coordenadas horizontales del gráfico (la pista va de 0 a 1; textos afuera) y siluetas en
@@ -70,8 +62,8 @@ RACE_LAPS = 58     # vueltas supuestas por carrera (el dataset no trae el total)
 CRASH_MAX = 0.9    # el choque más tardío (ej. descalificados con 0 vueltas de desventaja)
 NO_CRASH = 2.0     # `crash_s` de quien no choca (fuera de 0..1)
 CRASH_GRAY = "#6B6F76"
-GOOD = "#4CC38A"   # el modelo acierta mejor que la grilla (con ▲)
-BAD = "#F2685B"    # el modelo acierta peor que la grilla (con ▼)
+GOOD = C.MEJOR   # el modelo acierta mejor que la grilla (con ▲)
+BAD = C.PEOR    # el modelo acierta peor que la grilla (con ▼)
 CAR_BODY = ("M -1 -0.16 L 0.55 -0.11 L 1 -0.04 L 1 0.04 L 0.55 0.11 L -1 0.16 Z "
             "M 0.78 -0.42 L 0.94 -0.42 L 0.94 0.42 L 0.78 0.42 Z "
             "M -1 -0.36 L -0.82 -0.36 L -0.82 0.36 L -1 0.36 Z "

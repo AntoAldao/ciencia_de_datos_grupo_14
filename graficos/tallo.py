@@ -9,10 +9,12 @@ from __future__ import annotations
 import altair as alt
 import pandas as pd
 
+from graficos import colores as C
+
 from graficos.race_cars import ASPHALT, INK, INK_MUTED, LANE
 from graficos.race_errors import DNF_COLOR
 
-GRID_ORANGE = "#d95926"
+GRID_ORANGE = C.GRILLA
 FRANJAS = [(1, 5, "1–5"), (6, 10, "6–10"), (11, 15, "11–15"), (16, 99, "16 o más")]
 AXIS = dict(labelColor=INK_MUTED, titleColor=INK_MUTED, gridColor=LANE, domainColor=LANE,
             tickColor=LANE)

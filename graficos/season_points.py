@@ -22,6 +22,8 @@ from __future__ import annotations
 import altair as alt
 import pandas as pd
 
+from graficos import colores as C
+
 from graficos.race_cars import ASPHALT, INK, INK_MUTED, LANE
 
 POINTS = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1]
@@ -36,8 +38,8 @@ SCENARIOS = {
 }
 # El color dice de dónde sale el orden (realidad / modelo / grilla) y el punteado, que está
 # ajustado por abandonos. Azul y naranja: slots 1 y 2 de la paleta de referencia (dataviz).
-SCENARIO_COLORS = {"Realidad": INK, "Modelo": "#3987e5", "Modelo ajustado": "#3987e5",
-                   "Grilla": "#d95926", "Grilla ajustada": "#d95926"}
+SCENARIO_COLORS = {"Realidad": C.REAL, "Modelo": C.MODELO, "Modelo ajustado": C.MODELO,
+                   "Grilla": C.GRILLA, "Grilla ajustada": C.GRILLA}
 SCENARIO_DASH = {"Realidad": [1, 0], "Modelo": [1, 0], "Modelo ajustado": [6, 4],
                  "Grilla": [1, 0], "Grilla ajustada": [6, 4]}
 
