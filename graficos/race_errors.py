@@ -22,12 +22,14 @@ from __future__ import annotations
 import altair as alt
 import pandas as pd
 
+from graficos import colores as C
+
 from graficos.race_cars import ASPHALT, BAD, GOOD, INK, INK_MUTED, LANE
 from graficos.season_points import SCENARIO_COLORS
 
 MODEL_COLOR = SCENARIO_COLORS["Modelo"]
 GRID_COLOR = SCENARIO_COLORS["Grilla"]
-DNF_COLOR = "#8A8F98"
+DNF_COLOR = C.ABANDONO
 
 
 def race_errors(table: pd.DataFrame) -> pd.DataFrame:

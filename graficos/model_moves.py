@@ -27,6 +27,8 @@ import altair as alt
 import numpy as np
 import pandas as pd
 
+from graficos import colores as C
+
 from graficos.race_cars import ASPHALT, INK, INK_MUTED, LANE, RACE_COLS, driver_code
 
 # Grupos de variables, en el orden de la paleta (cada variable se lleva su indicador de faltante).
@@ -56,7 +58,8 @@ GROUP_HELP = {
 }
 # Paleta categórica de referencia (skill dataviz, pasos para fondo oscuro), en su orden fijo y
 # validada sobre ASPHALT (pasa todas las pruebas con estos 5; el 6.º, verde, queda bajo 3:1).
-GROUP_COLORS = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300"]
+# no usa el azul ni el naranja: esos son el modelo y la grilla en toda la app
+GROUP_COLORS = C.GRUPOS
 OTHER = "Otras"
 
 

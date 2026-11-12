@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 
 import modelo_entrega3 as m3
-from graficos import model_moves, race_cars, race_errors, season_points, tallo
+from graficos import model_moves, panorama, pasos, race_cars, race_errors, season_points, tallo
 
 APP_DATA = Path(__file__).resolve().parent / "app_data"
 ANIO_TEST = 2026   # lo único que el modelo no vio al entrenar (2018-2025)
@@ -72,7 +72,6 @@ def fmt(x: float, decimales: int = 2) -> str:
 df, aportes, resumen, notebook = cargar()
 test = resumen["test"]
 nombre_modelo = resumen["modelo"]["elegido"]
-tabla_test = tabla_temporada(df, ANIO_TEST)
 abandonos = tabla_nb("Peso de los abandonos")
 pct_error_abandonos = float(abandonos.loc["% del error absoluto total que explican"].iloc[0]
                             .replace(",", "."))
@@ -154,12 +153,12 @@ st.header(f"3. El modelo le gana a la grilla en los que terminan "
           f"({fmt(test['mae_modelo_sin_abandonos'])} contra "
           f"{fmt(test['mae_grilla_sin_abandonos'])} puestos), pero con los abandonos quedan casi "
           f"empatados ({fmt(test['mae_modelo'])} contra {fmt(test['mae_grilla'])})")
-st.altair_chart(race_errors.errors_chart(race_errors.race_errors(tabla_test),
-                                         model_name=nombre_modelo), theme=None)
-st.write("Cada punto es una carrera de 2026. Mirá el panel de abajo: las carreras con más "
-         "abandonos son las de más error, para el modelo y para la grilla por igual. Con la "
-         "casilla «Ajustar por abandonos» los que no terminaron pasan al fondo y el modelo gana "
-         "en más carreras.")
+st.altair_chart(pasos.grafico_pasos(df, test, anio_test=ANIO_TEST), theme=None)
+st.write("Recorré los pasos con los botones de abajo del gráfico. Cada barra cuenta cuántos pilotos "
+         "quedaron a esa distancia de su puesto real: en el 0, la predicción acertó. El gráfico "
+         "arranca en el paso 3, que es la conclusión: los que no terminaron (en gris) son la cola "
+         "de la izquierda, para el modelo y para la grilla por igual. En el paso 4 elegís la "
+         "temporada y podés sacar los abandonos.")
 with st.expander("Cómo lo sabemos"):
     st.markdown(
         "- **Métrica: MAE en puestos**, después de ordenar a los pilotos dentro de cada GP: "
@@ -201,6 +200,12 @@ st.divider()
 tab_explora, tab_prueba = st.tabs(["Explorá", "Probá el modelo"])
 
 with tab_explora:
+    st.subheader("Primero, todas las carreras")
+    st.altair_chart(panorama.panorama(df), theme=None)
+    st.caption("Cada carrera la predice un modelo que no la vio. Elegí una temporada en el menú, "
+               "arrastrá sobre la nube para quedarte con un grupo de carreras y hacé clic en la "
+               "leyenda para resaltar dónde ganó cada uno.")
+    st.subheader("Después, una temporada")
     anios = sorted(df["Year"].unique(), reverse=True)
     anio = st.selectbox("Temporada", [int(a) for a in anios])
     if anio < ANIO_TEST:
@@ -210,8 +215,11 @@ with tab_explora:
     else:
         st.caption(f"{ANIO_TEST} es el test: lo predice el modelo final, entrenado con 2018-2025.")
     tabla = tabla_temporada(df, anio)
-    sub_campeonato, sub_autos, sub_porque = st.tabs(
-        ["Campeonato", "Carrera por carrera", "Por qué el modelo mueve a cada piloto"])
+    sub_error, sub_campeonato, sub_autos, sub_porque = st.tabs(
+        ["Error por carrera", "Campeonato", "Carrera por carrera", "Por qué el modelo mueve a cada piloto"])
+    with sub_error:
+        st.altair_chart(race_errors.errors_chart(race_errors.race_errors(tabla),
+                                                 model_name=nombre_modelo), theme=None)
     with sub_campeonato:
         st.altair_chart(season_points.points_chart(season_points.season_points(tabla),
                                                    model_name=nombre_modelo), theme=None)
