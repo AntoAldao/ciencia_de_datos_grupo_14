@@ -155,9 +155,12 @@ button[data-baseweb="tab"] p {{ font-family: 'Titillium Web', sans-serif; font-w
     @keyframes f1-kerb {{ from {{ clip-path: inset(0 100% 0 0); }} to {{ clip-path: inset(0 0 0 0); }} }}
   }}
 }}
+/* Con "reducir movimiento" (en Windows: Efectos de animación apagados) se saca lo que se MUEVE,
+   pero el semáforo se enciende igual: es un cambio de color, no un movimiento. */
 @media (prefers-reduced-motion: reduce) {{
-  .f1-luz.roja, .f1-largada h1, .f1-largada .f1-sub, .f1-largada .f1-circuito, .f1-fuera, .f1-trazo, .f1-bandera .cuadros
-  {{ animation: none !important; opacity: 1 !important; stroke-dashoffset: 0 !important; }}
+  .f1-largada h1, .f1-largada .f1-sub, .f1-largada .f1-circuito {{ animation-name: f1-aparecer !important; }}
+  .f1-trazo {{ animation: none !important; stroke-dashoffset: 0 !important; }}
+  .f1-bandera .cuadros {{ animation: none !important; }}
 }}
 @media (max-width: 900px) {{ .f1-largada .f1-circuito {{ display: none; }} .f1-largada h1 {{ font-size: 2.2rem; }} }}
 </style>
