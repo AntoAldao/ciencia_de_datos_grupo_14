@@ -37,7 +37,7 @@ SCENARIOS = {
     "Grilla ajustada": "grid_adj",
 }
 # El color dice de dónde sale el orden (realidad / modelo / grilla) y el punteado, que está
-# ajustado por abandonos. Azul y naranja: slots 1 y 2 de la paleta de referencia (dataviz).
+# ajustado por abandonos. Azul y ámbar: slots 1 y 2 de la paleta de referencia (dataviz).
 SCENARIO_COLORS = {"Realidad": C.REAL, "Modelo": C.MODELO, "Modelo ajustado": C.MODELO,
                    "Grilla": C.GRILLA, "Grilla ajustada": C.GRILLA}
 SCENARIO_DASH = {"Realidad": [1, 0], "Modelo": [1, 0], "Modelo ajustado": [6, 4],
@@ -166,7 +166,7 @@ def points_chart(points: pd.DataFrame, width: int = 860, height: int = 380,
         width=width, height=height, title=alt.Title(
             alt.ExprRef("'Puntos de ' + (piloto.driver ? piloto.driver[0] : '') + "
                         "' según cada escenario'"),
-            subtitle=[f"Realidad (blanco), modelo {model_name} (azul) y grilla (naranja). "
+            subtitle=[f"Realidad (blanco), modelo {model_name} (azul) y grilla (ámbar). "
                       "Punteadas: ajustadas por abandonos (los que no terminaron van al fondo, "
                       "así que no suman)."],
             color=INK, subtitleColor=INK_MUTED, anchor="start", fontSize=15))
@@ -174,4 +174,4 @@ def points_chart(points: pd.DataFrame, width: int = 860, height: int = 380,
     return alt.vconcat(top, bottom, spacing=40).add_params(escenario).configure(
         background=ASPHALT, padding={"left": 20, "right": 140, "top": 16, "bottom": 16}
     ).configure_view(stroke=None, fill=ASPHALT).configure_axis(grid=True).configure_text(
-        font="sans-serif")
+        font=C.FUENTE)

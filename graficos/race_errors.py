@@ -2,8 +2,8 @@
 
 Tres paneles alineados por fecha:
 
-1. MAE de cada carrera del modelo (azul) y de la grilla usada como predicción (naranja).
-2. Diferencia `MAE grilla − MAE modelo` (▲ verde = el modelo acertó mejor; ▼ rojo = peor).
+1. MAE de cada carrera del modelo (azul) y de la grilla usada como predicción (ámbar).
+2. Diferencia `MAE grilla − MAE modelo` (▲ menta = el modelo acertó mejor; ▼ frambuesa = peor).
 3. Cuántos pilotos no terminaron esa carrera (con sus siglas en el tooltip).
 
 Una casilla cambia a la versión ajustada por abandonos (los que no terminaron van al fondo, en el
@@ -102,7 +102,7 @@ def errors_chart(errors: pd.DataFrame, width: int = 860,
                         "(ajuste ? ' (ajustado por abandonos)' : '')"),
             subtitle=["MAE = cuántos puestos se equivoca en promedio con cada piloto (menos es "
                       "mejor). La grilla es usar la largada como predicción.",
-                      "Modelo: punto azul; grilla: anillo naranja (si empatan se ven los dos). "
+                      "Modelo: punto azul; grilla: anillo ámbar (si empatan se ven los dos). "
                       "Líneas punteadas: promedio de la temporada."],
             color=INK, subtitleColor=INK_MUTED, anchor="start", fontSize=15))
 
@@ -120,7 +120,7 @@ def errors_chart(errors: pd.DataFrame, width: int = 860,
     p2 = alt.layer(zero, bars, arrows).properties(
         width=width, height=150, title=alt.Title(
             "¿Quién acertó mejor?",
-            subtitle="▲ verde: el modelo se equivocó menos que la grilla; ▼ rojo: más.",
+            subtitle="▲ menta: el modelo se equivocó menos que la grilla; ▼ frambuesa: más.",
             color=INK, subtitleColor=INK_MUTED, anchor="start", fontSize=13))
 
     # 3. Abandonos por carrera (otra medida: panel aparte, no segundo eje).
@@ -137,4 +137,4 @@ def errors_chart(errors: pd.DataFrame, width: int = 860,
         color="independent").configure(
         background=ASPHALT, padding={"left": 20, "right": 130, "top": 16, "bottom": 16}
     ).configure_view(stroke=None, fill=ASPHALT).configure_axis(grid=True).configure_text(
-        font="sans-serif")
+        font=C.FUENTE)

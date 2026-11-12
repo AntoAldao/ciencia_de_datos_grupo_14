@@ -118,4 +118,4 @@ def panorama(pred: pd.DataFrame, width: int = 430) -> alt.VConcatChart:
 
     return alt.vconcat(alt.hconcat(nube, equipos, spacing=50).resolve_scale(color="independent"), resumen, spacing=18).add_params(
         temporada).configure(background=C.ASPHALT, padding=16).configure_view(
-        stroke=None, fill=C.ASPHALT).configure_text(font="sans-serif").configure_title(fontSize=15)
+        stroke=None, fill=C.ASPHALT).configure_text(font=C.FUENTE).configure_title(fontSize=15)

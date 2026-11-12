@@ -1,7 +1,7 @@
 """Gráficos del tallo que no vienen de los otros módulos: Los datos y Lo que encontramos.
 
 Mismo estilo que el resto de la app (fondo oscuro) y mismos colores con el mismo significado:
-gris = no terminó (como en `race_errors`), naranja = la grilla (como en `season_points`).
+gris = no terminó (como en `race_errors`), ámbar = la grilla (como en `season_points`).
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ AXIS = dict(labelColor=INK_MUTED, titleColor=INK_MUTED, gridColor=LANE, domainCo
 
 def _estilo(chart: alt.TopLevelMixin) -> alt.TopLevelMixin:
     return chart.configure(background=ASPHALT, padding=16).configure_view(
-        stroke=None, fill=ASPHALT).configure_text(font="sans-serif")
+        stroke=None, fill=ASPHALT).configure_text(font=C.FUENTE)
 
 
 def _franja(puesto: pd.Series) -> pd.Series:

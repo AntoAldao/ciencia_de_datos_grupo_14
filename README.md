@@ -29,8 +29,10 @@ ciencia_de_datos_grupo_14/
 ├── app.py                # La aplicación (Streamlit): lee app_data/ y el modelo
 ├── build_app.py          # Datos del pipeline -> notebook de la Entrega 3 -> app_data/
 ├── modelo_entrega3.py    # Clases del notebook de la Entrega 3 + cargar el modelo y predecir
+├── estilo.py             # Look and feel F1: CSS, encabezado con escuderías y pie (solo decoración)
+├── assets/               # estilo.css, logo.svg y logos opcionales de escuderías (ver su LEEME.md)
 ├── graficos/             # Gráficos de la app (Altair)
-│   ├── colores.py        #   los colores de toda la app: cada uno significa una sola cosa
+│   ├── colores.py        #   los colores de toda la app: cada uno significa una sola cosa (aptos para daltónicos)
 │   ├── pasos.py          #   Sector 3 contado en pasos (copa de martini en un gráfico, práctica 7.9)
 │   └── panorama.py       #   Explorá: todas las carreras con vistas vinculadas (práctica 6.5)
 ├── app_data/             # Generado por build_app.py: predicciones, aportes y resumen

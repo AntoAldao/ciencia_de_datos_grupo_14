@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+import estilo
 import modelo_entrega3 as m3
 from graficos import model_moves, panorama, pasos, race_cars, race_errors, season_points, tallo
 
@@ -34,7 +35,8 @@ ETIQUETAS = {
     "FP_LapTime_mean_MED_ABS": "Prácticas: vuelta promedio con media (segundos)",
 }
 
-st.set_page_config(page_title="F1 – Grupo 14", layout="wide")
+st.set_page_config(page_title="F1 – Grupo 14", page_icon="🏁", layout="wide")
+estilo.aplicar()
 
 
 @st.cache_data
@@ -80,6 +82,12 @@ pct_filas_abandonos = float(abandonos.loc["% de las filas"].iloc[0].replace(",",
 # ----------------------------------------------------------------------------------------------
 # PORTADA: la pregunta, la idea central en una oración, tres números.
 # ----------------------------------------------------------------------------------------------
+# Franja de escuderías del test, en el orden del campeonato de constructores al final de los datos.
+ultima = df[df["Year"] == ANIO_TEST]
+ultima = ultima[ultima["RoundNumber"] == ultima["RoundNumber"].max()]
+equipos = (ultima.groupby("TeamId")["TeamPoints_Before"].max()
+           .sort_values(ascending=False).index.tolist())
+estilo.encabezado(equipos, f"Ciencia de Datos · UTN FRM · 2026")
 st.title("¿Se puede anticipar en qué puesto termina cada piloto de F1 con lo que se sabe "
          "antes de la carrera?")
 st.subheader("El modelo ordena mejor que la grilla a los pilotos que terminan la carrera, pero los "
@@ -103,7 +111,7 @@ st.divider()
 # ----------------------------------------------------------------------------------------------
 n_filas, n_carreras = len(df), df["Carrera"].nunique()
 pct_dnf = (df["Terminó"] == False).mean()  # noqa: E712
-st.header(f"1. En {n_carreras} Grandes Premios de 2018 a 2026, uno de cada "
+estilo.seccion(1, f"En {n_carreras} Grandes Premios de 2018 a 2026, uno de cada "
           f"{round(1 / pct_dnf)} pilotos no termina la carrera")
 st.altair_chart(tallo.abandonos_por_temporada(df), theme=None)
 st.write(f"Cada fila es un piloto en un Gran Premio: {n_filas:,} filas.".replace(",", ".")
@@ -123,7 +131,7 @@ with st.expander("Cómo lo sabemos"):
         "sanciones) nunca entra al modelo; si terminó o no se usa solo para medir. Las columnas "
         "`_Before` se calculan con el campeonato previo a la fecha.")
 
-st.header("2. Quien larga adelante termina adelante: la grilla sola ya ordena buena parte de "
+estilo.seccion(2, "Quien larga adelante termina adelante: la grilla sola ya ordena buena parte de "
           "la carrera")
 col_g, col_t = st.columns([3, 2])
 with col_g:
@@ -149,7 +157,7 @@ with st.expander("Cómo lo sabemos"):
         "(fila) y de llegada (columna); cada casilla es el % de los que largaron en esa franja. "
         "Los que largan desde boxes (sin posición de grilla) cuentan en «16 o más».")
 
-st.header(f"3. El modelo le gana a la grilla en los que terminan "
+estilo.seccion(3, f"El modelo le gana a la grilla en los que terminan "
           f"({fmt(test['mae_modelo_sin_abandonos'])} contra "
           f"{fmt(test['mae_grilla_sin_abandonos'])} puestos), pero con los abandonos quedan casi "
           f"empatados ({fmt(test['mae_modelo'])} contra {fmt(test['mae_grilla'])})")
@@ -201,7 +209,7 @@ tab_explora, tab_prueba = st.tabs(["Explorá", "Probá el modelo"])
 
 with tab_explora:
     st.subheader("Primero, todas las carreras")
-    st.altair_chart(panorama.panorama(df), theme=None)
+    st.altair_chart(panorama.panorama(df, width=620), theme=None)
     st.caption("Cada carrera la predice un modelo que no la vio. Elegí una temporada en el menú, "
                "arrastrá sobre la nube para quedarte con un grupo de carreras y hacé clic en la "
                "leyenda para resaltar dónde ganó cada uno.")
@@ -219,19 +227,19 @@ with tab_explora:
         ["Error por carrera", "Campeonato", "Carrera por carrera", "Por qué el modelo mueve a cada piloto"])
     with sub_error:
         st.altair_chart(race_errors.errors_chart(race_errors.race_errors(tabla),
-                                                 model_name=nombre_modelo), theme=None)
+                                                 model_name=nombre_modelo, width=1200), theme=None)
     with sub_campeonato:
         st.altair_chart(season_points.points_chart(season_points.season_points(tabla),
-                                                   model_name=nombre_modelo), theme=None)
+                                                   model_name=nombre_modelo, width=1200), theme=None)
     with sub_autos:
         # HTML propio: lleva el botón «Correr» que anima la carrera.
         st.iframe(race_cars.to_html(race_cars.race_cars_compare(
-            tabla, model_name=nombre_modelo)))
+            tabla, model_name=nombre_modelo, width=1100)))
     with sub_porque:
         es_anio = (df["Year"] == anio).to_numpy()
         contrib = model_moves.contributions(
             aportes[es_anio].drop(columns=["Carrera", "DriverId"]), df[es_anio])
-        st.altair_chart(model_moves.moves_chart(contrib, model_name=nombre_modelo), theme=None)
+        st.altair_chart(model_moves.moves_chart(contrib, model_name=nombre_modelo, width=800), theme=None)
 
 with tab_prueba:
     guardado = modelo()
@@ -320,3 +328,5 @@ with tab_prueba:
     st.caption(f"En la realidad terminó {int(autos.loc[i, 'Puesto'])}.º"
                + (" (no terminó la carrera)" if autos.loc[i, "Terminó"] is False
                   or str(autos.loc[i, "Terminó"]) == "False" else "") + ".")
+
+estilo.pie("Grupo 14 · Ciencia de Datos · UTN FRM", f"Datos 2018–{ANIO_TEST}")

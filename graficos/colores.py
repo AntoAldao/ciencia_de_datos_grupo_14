@@ -2,12 +2,20 @@
 
 Cada color significa una sola cosa en todos los gráficos (lo pide la consigna):
 
-- MODELO (azul) y GRILLA (naranja): las dos predicciones que se comparan siempre.
+- MODELO (azul) y GRILLA (ámbar): las dos predicciones que se comparan siempre.
 - REAL (blanco): lo que pasó en la carrera.
 - ABANDONO (gris): los que no terminaron.
-- MEJOR / PEOR: el modelo acertó mejor / peor que la grilla.
-- Los grupos de variables del modelo usan otra paleta, que NO repite el azul ni el naranja.
-- Las escuderías, sus colores de identidad.
+- MEJOR / PEOR: el modelo acertó mejor / peor que la grilla (siempre con ▲ / ▼).
+- Los grupos de variables del modelo usan otra paleta, que NO repite el azul ni el ámbar.
+- Las escuderías, sus colores de identidad (esos NO se tocan: el color es la marca).
+
+Apta para daltónicos: todo lo que significa algo se eligió para que se distinga también con
+protanopía, deuteranopía y tritanopía (simulación de Machado et al., 2009, distancia en OKLab).
+Por eso nada se apoya en el par rojo/verde: azul contra ámbar, y MEJOR / PEOR se separan por
+luminosidad (claro contra oscuro) además de por el tono y el símbolo.
+
+Los rojos de la "identidad F1" (F1_ROJO, bordes de pista) son solo decoración de la interfaz:
+nunca codifican un dato.
 
 Los módulos de `graficos/` importan de acá: si un color cambia, cambia en toda la app.
 """
@@ -19,16 +27,22 @@ INK = "#E8EAED"         # texto principal
 INK_MUTED = "#9AA0A6"   # texto secundario
 
 # Lo que se compara
-MODELO = "#3987e5"
-GRILLA = "#d95926"
+MODELO = "#3B8FE5"      # azul
+GRILLA = "#E69F00"      # ámbar (Okabe-Ito): se separa del azul con cualquier tipo de daltonismo
 REAL = INK
 ABANDONO = "#8A8F98"
 PISO = "#5F6368"
-MEJOR = "#4CC38A"       # el modelo acierta mejor que la grilla (con ▲)
-PEOR = "#F2685B"        # el modelo acierta peor que la grilla (con ▼)
+MEJOR = "#9EEBCF"       # el modelo acierta mejor que la grilla (con ▲): menta claro
+PEOR = "#D94A7E"        # el modelo acierta peor que la grilla (con ▼): frambuesa, más oscuro
 
-# Grupos de variables del modelo (verde, ámbar, rosa, violeta, gris): ninguno es azul ni naranja.
-GRUPOS = ["#199e70", "#c98500", "#d55181", "#9b7bd6", "#7f8c8d", "#5ab4ac"]
+# Grupos de variables del modelo (verde azulado, amarillo, rosa claro, ocre, lavanda y un gris
+# oscuro para «Otras»): ninguno es azul ni ámbar y se distinguen con daltonismo.
+GRUPOS = ["#2E9C86", "#F0E442", "#F5B8D2", "#A8782E", "#9C8BE0", "#6B6F76"]
+
+# Identidad F1 de la interfaz (solo decoración, nunca un dato)
+F1_ROJO = "#E10600"
+CARBONO = "#15151E"     # paneles oscuros tipo fibra de carbono
+FUENTE = "Titillium Web, sans-serif"
 
 # Escuderías (colores de identidad aproximados; los compañeros de equipo comparten color).
 ESCUDERIAS = {

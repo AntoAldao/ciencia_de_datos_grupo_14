@@ -11,7 +11,7 @@ valores que las capas leen.
     Mapeo:           error -> x (ordinal), cantidad -> y, predicción -> xOffset y color.
                      En el paso 3 el color pasa a ser "abandonó" para los que no terminaron.
     Escalas:         ejes fijos en todos los pasos (para que el gráfico no salte) y los colores de
-                     graficos/colores.py: azul = modelo, naranja = grilla, gris = abandono.
+                     graficos/colores.py: azul = modelo, ámbar = grilla, gris = abandono.
 
 Pasos:
     1 · La grilla       solo la grilla: la mayoría termina cerca de donde largó.
@@ -154,4 +154,4 @@ def grafico_pasos(pred: pd.DataFrame, test: dict, anio_test: int = 2026,
 
     return alt.layer(barras, cero, texto, texto4).add_params(paso, anio, sin_ab).properties(width=width, height=height).configure(
         background=C.ASPHALT, padding={"left": 16, "right": 16, "top": 16, "bottom": 8}
-    ).configure_view(stroke=None, fill=C.ASPHALT).configure_text(font="sans-serif")
+    ).configure_view(stroke=None, fill=C.ASPHALT).configure_text(font=C.FUENTE)
