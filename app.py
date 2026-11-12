@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+import estilo
 import modelo_entrega3 as m3
 from graficos import model_moves, panorama, pasos, race_cars, race_errors, season_points, tallo
 
@@ -34,7 +35,8 @@ ETIQUETAS = {
     "FP_LapTime_mean_MED_ABS": "Prácticas: vuelta promedio con media (segundos)",
 }
 
-st.set_page_config(page_title="F1 – Grupo 14", layout="wide")
+st.set_page_config(page_title="¿La grilla lo dice todo? · F1 · Grupo 14", page_icon="🏁", layout="wide")
+estilo.aplicar()
 
 
 @st.cache_data
@@ -80,10 +82,11 @@ pct_filas_abandonos = float(abandonos.loc["% de las filas"].iloc[0].replace(",",
 # ----------------------------------------------------------------------------------------------
 # PORTADA: la pregunta, la idea central en una oración, tres números.
 # ----------------------------------------------------------------------------------------------
-st.title("¿Se puede anticipar en qué puesto termina cada piloto de F1 con lo que se sabe "
-         "antes de la carrera?")
-st.subheader("El modelo ordena mejor que la grilla a los pilotos que terminan la carrera, pero los "
-             "abandonos, que nadie anticipa, se comen esa ventaja.")
+estilo.largada(
+    "¿Se puede anticipar en qué puesto termina cada piloto de F1 con lo que se sabe antes de "
+    "la carrera?",
+    "El modelo ordena mejor que la grilla a los pilotos que terminan la carrera, pero los "
+    "abandonos, que nadie anticipa, se comen esa ventaja.")
 c1, c2, c3 = st.columns(3)
 c1.metric("Error sin abandonos: modelo vs. grilla",
           f"{fmt(test['mae_modelo_sin_abandonos'])} vs. {fmt(test['mae_grilla_sin_abandonos'])}",
@@ -96,14 +99,15 @@ c3.metric("Parte del error que explican los abandonos", f"{pct_error_abandonos:.
 st.caption(f"Test: las {test['carreras']} carreras de {ANIO_TEST}, que el modelo no vio al "
            "entrenar. Error = cuántos puestos se equivoca en promedio con cada piloto.")
 
-st.divider()
+estilo.piano()
 
 # ----------------------------------------------------------------------------------------------
 # TALLO: cada sección = título que afirma + gráfico + «Cómo lo sabemos» (cerrado por defecto).
 # ----------------------------------------------------------------------------------------------
 n_filas, n_carreras = len(df), df["Carrera"].nunique()
 pct_dnf = (df["Terminó"] == False).mean()  # noqa: E712
-st.header(f"1. En {n_carreras} Grandes Premios de 2018 a 2026, uno de cada "
+estilo.sector(1, "Los datos")
+st.header(f"En {n_carreras} Grandes Premios de 2018 a 2026, uno de cada "
           f"{round(1 / pct_dnf)} pilotos no termina la carrera")
 st.altair_chart(tallo.abandonos_por_temporada(df), theme=None)
 st.write(f"Cada fila es un piloto en un Gran Premio: {n_filas:,} filas.".replace(",", ".")
@@ -123,7 +127,9 @@ with st.expander("Cómo lo sabemos"):
         "sanciones) nunca entra al modelo; si terminó o no se usa solo para medir. Las columnas "
         "`_Before` se calculan con el campeonato previo a la fecha.")
 
-st.header("2. Quien larga adelante termina adelante: la grilla sola ya ordena buena parte de "
+estilo.piano()
+estilo.sector(2, "Lo que encontramos")
+st.header("Quien larga adelante termina adelante: la grilla sola ya ordena buena parte de "
           "la carrera")
 col_g, col_t = st.columns([3, 2])
 with col_g:
@@ -149,7 +155,9 @@ with st.expander("Cómo lo sabemos"):
         "(fila) y de llegada (columna); cada casilla es el % de los que largaron en esa franja. "
         "Los que largan desde boxes (sin posición de grilla) cuentan en «16 o más».")
 
-st.header(f"3. El modelo le gana a la grilla en los que terminan "
+estilo.piano()
+estilo.sector(3, "El modelo")
+st.header(f"El modelo le gana a la grilla en los que terminan "
           f"({fmt(test['mae_modelo_sin_abandonos'])} contra "
           f"{fmt(test['mae_grilla_sin_abandonos'])} puestos), pero con los abandonos quedan casi "
           f"empatados ({fmt(test['mae_modelo'])} contra {fmt(test['mae_grilla'])})")
@@ -192,7 +200,11 @@ with st.expander("Cómo lo sabemos"):
     st.markdown("**Chequeo de fuga** en las columnas que más pesan:")
     st.dataframe(tabla_nb("Chequeo de fuga"))
 
-st.divider()
+estilo.piano()
+estilo.pit_lane("Tu turno: explorá las carreras y probá el modelo",
+                "Hasta acá manejamos nosotros. Desde los boxes manejás vos: recorré todas las "
+                "carreras, elegí una temporada y cambiale los datos a un piloto para ver dónde "
+                "lo pondría el modelo.")
 
 # ----------------------------------------------------------------------------------------------
 # COPA: la maneja el usuario.
@@ -320,3 +332,12 @@ with tab_prueba:
     st.caption(f"En la realidad terminó {int(autos.loc[i, 'Puesto'])}.º"
                + (" (no terminó la carrera)" if autos.loc[i, "Terminó"] is False
                   or str(autos.loc[i, "Terminó"]) == "False" else "") + ".")
+
+estilo.bandera(
+    "Bandera a cuadros",
+    f"Con lo que se sabe antes de largar, el modelo ordena a los que terminan mejor que la grilla "
+    f"({fmt(test['mae_modelo_sin_abandonos'])} contra {fmt(test['mae_grilla_sin_abandonos'])} "
+    f"puestos de error). Pero uno de cada {round(1 / pct_dnf)} pilotos no termina, y eso nadie lo "
+    f"ve venir: con los abandonos, quedan casi empatados ({fmt(test['mae_modelo'])} contra "
+    f"{fmt(test['mae_grilla'])}).<br><span style='color:#9AA0A6'>Ciencia de Datos · UTN FRM · 2026 "
+    f"· Grupo 14 · Datos del pipeline de la Entrega 1, al día: {resumen['datos']['al_dia']}.</span>")
