@@ -1,0 +1,147 @@
+/* Look and feel F1 de la app. Solo interfaz: los colores de los datos están en graficos/colores.py.
+   Rojo F1 = acento decorativo (nunca un dato). Tipografía: Titillium Web (.streamlit/config.toml). */
+
+:root {
+  --f1-rojo: #E10600;
+  --f1-carbono: #15151E;
+  --f1-asfalto: #26282C;
+  --f1-carril: #3A3D43;
+  --f1-tinta: #E8EAED;
+  --f1-tinta-suave: #9AA0A6;
+  --f1-kerb: repeating-linear-gradient(90deg, var(--f1-rojo) 0 28px, #F5F5F5 28px 56px);
+  --f1-cuadros: conic-gradient(#F5F5F5 25%, var(--f1-carbono) 0 50%, #F5F5F5 0 75%, var(--f1-carbono) 0) 0 0 / 12px 12px;
+}
+
+/* Barra superior de Streamlit -> piano (kerb) rojo y blanco */
+[data-testid="stDecoration"] { background: var(--f1-kerb); height: 5px; }
+[data-testid="stHeader"] { background: rgba(21, 21, 30, .85); backdrop-filter: blur(6px); }
+
+/* Fondo: asfalto con una textura muy suave (el centro sigue siendo el color de los gráficos) */
+.stApp {
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(225, 6, 0, .10), transparent 60%),
+    var(--f1-asfalto);
+}
+[data-testid="stMainBlockContainer"] { max-width: 1280px; padding-top: 3.2rem; }
+
+/* ---------- Encabezado ---------- */
+.f1-hero {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  padding: 14px 20px 14px 18px; margin-bottom: 6px;
+  background: linear-gradient(100deg, var(--f1-carbono) 0 62%, rgba(21, 21, 30, .6));
+  border-left: 6px solid var(--f1-rojo);
+  border-radius: 4px;
+}
+.f1-hero::after {            /* bandera a cuadros en la punta derecha */
+  content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 120px;
+  background: var(--f1-cuadros);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 85%);
+  mask-image: linear-gradient(90deg, transparent, #000 85%);
+  opacity: .35;
+}
+.f1-hero img { height: 44px; width: auto; }
+.f1-hero .f1-marca { display: flex; flex-direction: column; line-height: 1.05; }
+.f1-hero .f1-marca b {
+  font-weight: 900; font-style: italic; font-size: 1.45rem; letter-spacing: .02em;
+  text-transform: uppercase; color: var(--f1-tinta);
+}
+.f1-hero .f1-marca span {
+  font-weight: 600; font-size: .78rem; letter-spacing: .22em; text-transform: uppercase;
+  color: var(--f1-tinta-suave);
+}
+
+/* Franja de escuderías: el color de identidad de cada equipo (como los colores de los autos) */
+.f1-parrilla { display: flex; gap: 4px; margin: 0 0 1.4rem; flex-wrap: wrap; }
+.f1-escuderia {
+  flex: 1 1 80px; min-width: 72px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--f1-carbono); border-radius: 3px;
+  border-top: 4px solid var(--equipo);
+  font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--f1-tinta-suave); white-space: nowrap; overflow: hidden; padding: 0 6px;
+  transition: transform .15s ease, color .15s ease;
+}
+.f1-escuderia:hover { transform: translateY(-2px); color: var(--f1-tinta); }
+.f1-escuderia img { max-height: 20px; max-width: 100%; object-fit: contain; }
+
+/* ---------- Títulos ---------- */
+h1 {
+  font-style: italic; letter-spacing: -.01em; line-height: 1.08 !important;
+  text-transform: none;
+}
+[data-testid="stMainBlockContainer"] h2 {
+  position: relative; padding-left: 18px; margin-top: .6rem;
+  font-weight: 700; line-height: 1.2;
+}
+[data-testid="stMainBlockContainer"] h2::before {   /* marca de sector, inclinada como en la TV */
+  content: ""; position: absolute; left: 0; top: .2em; height: 1em; width: 6px;
+  background: var(--f1-rojo); transform: skewX(-12deg);
+}
+[data-testid="stMainBlockContainer"] h3 { font-weight: 700; color: var(--f1-tinta); }
+
+/* ---------- Métricas como tablero de tiempos ---------- */
+[data-testid="stMetric"] {
+  background: linear-gradient(180deg, var(--f1-carbono), #1B1C24);
+  border: 1px solid var(--f1-carril); border-top: 3px solid var(--f1-rojo);
+  border-radius: 4px; padding: 14px 18px 12px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .25);
+}
+[data-testid="stMetricLabel"] p {
+  font-size: .78rem !important; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--f1-tinta-suave);
+}
+[data-testid="stMetricLabel"] .stMarkdownEllipsis,
+[data-testid="stMetricLabel"] .stMarkdownEllipsis p {   /* el rótulo completo, sin «...» */
+  white-space: normal !important; overflow: visible !important; text-overflow: clip !important;
+}
+[data-testid="stMetricValue"] {
+  font-weight: 700; font-style: italic; font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Separadores: bandera a cuadros ---------- */
+[data-testid="stMainBlockContainer"] hr {
+  border: none !important; height: 12px !important; margin: 2.2rem 0 !important;
+  background: var(--f1-cuadros) !important; opacity: .55;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
+}
+
+/* ---------- Pestañas ---------- */
+[data-testid="stTabs"] [role="tablist"] { gap: 4px; }
+[data-testid="stTab"] {
+  background: var(--f1-carbono); border-radius: 4px 4px 0 0; padding: 8px 18px !important;
+}
+[data-testid="stTab"] p {
+  font-weight: 700; letter-spacing: .05em; text-transform: uppercase; font-size: .85rem;
+}
+[data-testid="stTab"][aria-selected="true"] { background: #2E3036; }
+
+/* ---------- Expanders («Cómo lo sabemos») ---------- */
+[data-testid="stExpander"] details {
+  background: var(--f1-carbono); border-color: var(--f1-carril); border-radius: 4px;
+}
+[data-testid="stExpander"] summary p { font-weight: 600; letter-spacing: .03em; }
+[data-testid="stExpander"] summary:hover p { color: var(--f1-tinta); }
+
+/* Gráficos e iframe: tarjeta con borde fino, como un panel de transmisión */
+[data-testid="stVegaLiteChart"], [data-testid="stIFrame"] {
+  border: 1px solid var(--f1-carril); border-radius: 4px; overflow: hidden;
+}
+
+/* ---------- Pie ---------- */
+.f1-pie {
+  margin-top: 3rem; padding: 14px 0 6px; border-top: 4px solid transparent;
+  border-image: var(--f1-kerb) 1;
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; color: var(--f1-tinta-suave);
+}
+
+@media (max-width: 640px) {
+  .f1-hero .f1-marca b { font-size: 1.1rem; }
+  .f1-hero::after { width: 60px; }
+  .f1-escuderia { flex-basis: 60px; font-size: .6rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .f1-escuderia { transition: none; }
+}

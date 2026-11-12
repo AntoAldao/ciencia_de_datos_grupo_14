@@ -57,8 +57,8 @@ GROUP_HELP = {
     FINISH: "% de sus carreras anteriores que terminó",
 }
 # Paleta categórica de referencia (skill dataviz, pasos para fondo oscuro), en su orden fijo y
-# validada sobre ASPHALT (pasa todas las pruebas con estos 5; el 6.º, verde, queda bajo 3:1).
-# no usa el azul ni el naranja: esos son el modelo y la grilla en toda la app
+# validada sobre ASPHALT y simulada con daltonismo (ver graficos/colores.py).
+# no usa el azul ni el ámbar: esos son el modelo y la grilla en toda la app
 GROUP_COLORS = C.GRUPOS
 OTHER = "Otras"
 
@@ -249,5 +249,5 @@ def moves_chart(contrib: pd.DataFrame, width: int = 620, row_height: int = 24,
     chart = alt.vconcat(top, glossary, bottom, spacing=30).add_params(carrera, abandonos).configure(
         background=ASPHALT, padding={"left": 20, "right": 220, "top": 16, "bottom": 16}
     ).configure_view(stroke=None, fill=ASPHALT).configure_axis(grid=True).configure_text(
-        font="sans-serif").configure_legend(labelColor=INK)
+        font=C.FUENTE).configure_legend(labelColor=INK)
     return chart

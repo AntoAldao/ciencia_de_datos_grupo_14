@@ -562,7 +562,7 @@ def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, thresho
 def _configure(chart: Any) -> Any:
     return chart.configure(
         background=ASPHALT, padding={"left": 20, "right": 20, "top": 16, "bottom": 16}
-    ).configure_view(stroke=None, fill=ASPHALT).configure_text(font="sans-serif")
+    ).configure_view(stroke=None, fill=ASPHALT).configure_text(font=C.FUENTE)
 
 
 def _max_behind(table: pd.DataFrame, adjusted: bool) -> float:
@@ -636,13 +636,23 @@ _HTML = """<!doctype html>
 <script src="https://cdn.jsdelivr.net/npm/vega@5.30.0"></script>
 <script src="https://cdn.jsdelivr.net/npm/vega-lite@5.21.0"></script>
 <script src="https://cdn.jsdelivr.net/npm/vega-embed@6.26.0"></script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;1,700&display=swap" rel="stylesheet">
 <style>
-  html, body {{ background:{bg}; color:{ink}; font-family:sans-serif; margin:0;
+  html, body {{ background:{bg}; color:{ink}; font-family:{font}; margin:0;
                overflow:hidden; }}
   #controles {{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:8px; }}
-  button {{ background:{lane}; color:{ink}; border:1px solid {muted}; border-radius:6px;
-           padding:6px 14px; font-size:14px; cursor:pointer; }}
+  button {{ background:{lane}; color:{ink}; border:1px solid {muted}; border-radius:4px;
+           padding:6px 16px; font:600 14px {font}; cursor:pointer; letter-spacing:.04em;
+           text-transform:uppercase; transition:background .15s, border-color .15s; }}
+  button:hover {{ border-color:{ink}; }}
+  button:focus-visible {{ outline:2px solid {ink}; outline-offset:2px; }}
+  #play {{ background:{rojo}; border-color:{rojo}; color:#fff; font-style:italic;
+          clip-path:polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); padding:6px 22px; }}
+  #play:hover {{ filter:brightness(1.12); }}
   .vega-bindings {{ display:inline-block; margin-left:12px; }}
+  .vega-bindings select {{ background:{lane}; color:{ink}; border:1px solid {muted};
+                          border-radius:4px; padding:4px 6px; font:14px {font}; }}
   #marco {{ overflow:hidden; }}
   #vis {{ transform-origin:top left; }}
 </style></head><body>
@@ -685,7 +695,8 @@ def to_html(chart: alt.TopLevelMixin, duration_s: float = 6.0,
             title: str = "Autitos F1") -> str:
     """HTML autónomo con el gráfico y botones para correr la carrera y volver a la largada."""
     return _HTML.format(title=title, spec=json.dumps(chart.to_dict()), bg=ASPHALT, ink=INK,
-                        lane=LANE, muted=INK_MUTED, duration_ms=int(duration_s * 1000))
+                        lane=LANE, muted=INK_MUTED, rojo=C.F1_ROJO, font=C.FUENTE,
+                        duration_ms=int(duration_s * 1000))
 
 
 def save_html(chart: alt.TopLevelMixin, path: str | Path, duration_s: float = 6.0) -> Path:

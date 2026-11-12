@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 64" role="img" aria-label="Grupo 14">
+  <!-- Marca propia del grupo: tres franjas de velocidad y una bandera a cuadros. -->
+  <defs>
+    <pattern id="cuadros" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="8" height="8" fill="#15151E"/>
+      <rect width="4" height="4" fill="#F5F5F5"/>
+      <rect x="4" y="4" width="4" height="4" fill="#F5F5F5"/>
+    </pattern>
+  </defs>
+  <path d="M14 8 H66 L58 20 H6 Z" fill="#E10600"/>
+  <path d="M10 26 H62 L54 38 H2 Z" fill="#E10600" opacity=".75"/>
+  <path d="M6 44 H58 L50 56 H-2 Z" fill="#E10600" opacity=".5"/>
+  <path d="M72 8 H118 L102 56 H56 Z" fill="url(#cuadros)" stroke="#F5F5F5" stroke-width="1.5"/>
+</svg>

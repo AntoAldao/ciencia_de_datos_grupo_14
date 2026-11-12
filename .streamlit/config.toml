@@ -1,3 +1,17 @@
+# Tema de la app: oscuro, con la identidad visual de la F1 (rojo de acento y Titillium Web).
+# Los colores que significan algo en los gráficos salen de graficos/colores.py.
 [theme]
 base = "dark"
-backgroundColor = "#26282C"
+primaryColor = "#E10600"              # rojo F1: botones, sliders, pestaña activa (solo interfaz)
+backgroundColor = "#26282C"           # asfalto: el mismo fondo que los gráficos
+secondaryBackgroundColor = "#1E1F24"  # paneles (expanders, tablas, inputs)
+textColor = "#E8EAED"
+borderColor = "#3A3D43"
+linkColor = "#7FB8F0"
+font = "Titillium Web:https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,300;0,400;0,600;0,700;0,900;1,700;1,900&display=swap"
+headingFont = "Titillium Web"
+headingFontWeights = [900, 700, 700]
+codeFont = "monospace"
+baseRadius = "0.25rem"
+dataframeHeaderBackgroundColor = "#15151E"
+chartCategoricalColors = ["#3B8FE5", "#E69F00", "#9EEBCF", "#D94A7E", "#F0E442", "#9C8BE0"]

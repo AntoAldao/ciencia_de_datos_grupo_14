@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+import estilo
 import modelo_entrega3 as m3
 from graficos import model_moves, panorama, pasos, race_cars, race_errors, season_points, tallo
 
@@ -34,7 +35,8 @@ ETIQUETAS = {
     "FP_LapTime_mean_MED_ABS": "Prácticas: vuelta promedio con media (segundos)",
 }
 
-st.set_page_config(page_title="F1 – Grupo 14", layout="wide")
+st.set_page_config(page_title="F1 – Grupo 14", page_icon="🏁", layout="wide")
+estilo.aplicar()
 
 
 @st.cache_data
@@ -80,6 +82,12 @@ pct_filas_abandonos = float(abandonos.loc["% de las filas"].iloc[0].replace(",",
 # ----------------------------------------------------------------------------------------------
 # PORTADA: la pregunta, la idea central en una oración, tres números.
 # ----------------------------------------------------------------------------------------------
+# Franja de escuderías del test, en el orden del campeonato de constructores al final de los datos.
+ultima = df[df["Year"] == ANIO_TEST]
+ultima = ultima[ultima["RoundNumber"] == ultima["RoundNumber"].max()]
+equipos = (ultima.groupby("TeamId")["TeamPoints_Before"].max()
+           .sort_values(ascending=False).index.tolist())
+estilo.encabezado(equipos, f"Ciencia de Datos · UTN FRM · 2018–{ANIO_TEST}")
 st.title("¿Se puede anticipar en qué puesto termina cada piloto de F1 con lo que se sabe "
          "antes de la carrera?")
 st.subheader("El modelo ordena mejor que la grilla a los pilotos que terminan la carrera, pero los "
@@ -320,3 +328,5 @@ with tab_prueba:
     st.caption(f"En la realidad terminó {int(autos.loc[i, 'Puesto'])}.º"
                + (" (no terminó la carrera)" if autos.loc[i, "Terminó"] is False
                   or str(autos.loc[i, "Terminó"]) == "False" else "") + ".")
+
+estilo.pie("Grupo 14 · Ciencia de Datos · UTN FRM", f"Datos 2018–{ANIO_TEST}")
