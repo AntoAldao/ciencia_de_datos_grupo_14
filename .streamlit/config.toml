@@ -13,5 +13,6 @@ headingFont = "Titillium Web"
 headingFontWeights = [900, 700, 700]
 codeFont = "monospace"
 baseRadius = "0.25rem"
+baseFontSize = 17
 dataframeHeaderBackgroundColor = "#15151E"
 chartCategoricalColors = ["#3B8FE5", "#E69F00", "#9EEBCF", "#D94A7E", "#F0E442", "#9C8BE0"]

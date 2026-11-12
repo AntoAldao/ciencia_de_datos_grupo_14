@@ -22,62 +22,91 @@
     radial-gradient(1200px 500px at 85% -10%, rgba(225, 6, 0, .10), transparent 60%),
     var(--f1-asfalto);
 }
-[data-testid="stMainBlockContainer"] { max-width: 1280px; padding-top: 3.2rem; }
+[data-testid="stMainBlockContainer"] { max-width: 1560px; padding: 3.2rem 2.5rem 2rem; }
 
 /* ---------- Encabezado ---------- */
 .f1-hero {
   position: relative; overflow: hidden;
-  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
-  padding: 14px 20px 14px 18px; margin-bottom: 6px;
+  display: flex; align-items: center; gap: 22px; flex-wrap: wrap;
+  padding: 18px 24px; margin-bottom: 0;
   background: linear-gradient(100deg, var(--f1-carbono) 0 62%, rgba(21, 21, 30, .6));
-  border-left: 6px solid var(--f1-rojo);
-  border-radius: 4px;
+  border-radius: 6px 6px 0 0;
+}
+.f1-hero::before {           /* trazado de circuito de marca de agua */
+  content: ""; position: absolute; right: 150px; top: -30%; bottom: -30%; width: 260px;
+  background: var(--circuito) center / contain no-repeat; opacity: .10;
 }
 .f1-hero::after {            /* bandera a cuadros en la punta derecha */
-  content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 120px;
+  content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 130px;
   background: var(--f1-cuadros);
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 85%);
   mask-image: linear-gradient(90deg, transparent, #000 85%);
   opacity: .35;
 }
-.f1-hero img { height: 44px; width: auto; }
-.f1-hero .f1-marca { display: flex; flex-direction: column; line-height: 1.05; }
+.f1-hero .f1-hero-logo { height: 40px; width: auto; }
+.f1-hero .f1-marca {
+  display: flex; flex-direction: column; line-height: 1.1;
+  padding-left: 22px; border-left: 1px solid var(--f1-carril);
+}
 .f1-hero .f1-marca b {
-  font-weight: 900; font-style: italic; font-size: 1.45rem; letter-spacing: .02em;
+  font-weight: 900; font-style: italic; font-size: 1.6rem; letter-spacing: .02em;
   text-transform: uppercase; color: var(--f1-tinta);
 }
 .f1-hero .f1-marca span {
-  font-weight: 600; font-size: .78rem; letter-spacing: .22em; text-transform: uppercase;
+  font-weight: 600; font-size: .82rem; letter-spacing: .22em; text-transform: uppercase;
   color: var(--f1-tinta-suave);
 }
 
-/* Franja de escuderías: el color de identidad de cada equipo (como los colores de los autos) */
-.f1-parrilla { display: flex; gap: 4px; margin: 0 0 1.4rem; flex-wrap: wrap; }
-.f1-escuderia {
-  flex: 1 1 80px; min-width: 72px; height: 34px;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--f1-carbono); border-radius: 3px;
-  border-top: 4px solid var(--equipo);
-  font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-  color: var(--f1-tinta-suave); white-space: nowrap; overflow: hidden; padding: 0 6px;
-  transition: transform .15s ease, color .15s ease;
+/* Banda de escuderías: decorativa (no se puede tocar). Logos en blanco y, debajo de cada uno,
+   una línea con el color de identidad del equipo (el mismo de los autos). */
+.f1-parrilla {
+  display: flex; align-items: stretch; flex-wrap: wrap;
+  margin: 0 0 1.8rem; padding: 14px 10px 0;
+  background: #1B1C24; border-radius: 0 0 6px 6px;
+  border-top: 1px solid var(--f1-carril);
+  pointer-events: none; user-select: none; cursor: default;
 }
-.f1-escuderia:hover { transform: translateY(-2px); color: var(--f1-tinta); }
-.f1-escuderia img { max-height: 20px; max-width: 100%; object-fit: contain; }
+.f1-escuderia {
+  flex: 1 1 90px; min-width: 70px; height: 54px; padding: 0 10px 12px;
+  display: flex; align-items: center; justify-content: center; position: relative;
+}
+.f1-escuderia::after {
+  content: ""; position: absolute; left: 22%; right: 22%; bottom: 0; height: 3px;
+  background: var(--equipo); border-radius: 2px 2px 0 0;
+}
+.f1-escuderia + .f1-escuderia { border-left: 1px solid rgba(255, 255, 255, .06); }
+.f1-escuderia img { max-height: 34px; max-width: 100%; object-fit: contain; }
+.f1-escuderia img.f1-logo { filter: brightness(0) invert(1); opacity: .88; }
+.f1-escuderia img.f1-logo.color { filter: none; opacity: 1; }
+.f1-escuderia span {
+  font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--f1-tinta-suave); white-space: nowrap;
+}
 
 /* ---------- Títulos ---------- */
 h1 {
   font-style: italic; letter-spacing: -.01em; line-height: 1.08 !important;
   text-transform: none;
 }
-[data-testid="stMainBlockContainer"] h2 {
-  position: relative; padding-left: 18px; margin-top: .6rem;
-  font-weight: 700; line-height: 1.2;
+/* Secciones del tallo: neumático (blanda, media, dura) + título + circuito de fondo */
+.f1-seccion {
+  position: relative; display: flex; align-items: center; gap: 18px;
+  margin: 1.2rem 0 .4rem; padding: 6px 0;
 }
-[data-testid="stMainBlockContainer"] h2::before {   /* marca de sector, inclinada como en la TV */
-  content: ""; position: absolute; left: 0; top: .2em; height: 1em; width: 6px;
-  background: var(--f1-rojo); transform: skewX(-12deg);
+.f1-seccion::after {
+  content: ""; position: absolute; right: 0; top: -20%; bottom: -20%; width: 180px;
+  background: var(--circuito) center / contain no-repeat; opacity: .09; pointer-events: none;
 }
+.f1-seccion .f1-rueda {
+  flex: 0 0 auto; width: 58px; height: 58px;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .45));
+  animation: f1-girar 1.2s cubic-bezier(.2, .7, .2, 1) both;
+}
+.f1-seccion h2 {
+  margin: 0; padding: 0 200px 0 0; font-size: 2.1rem; font-weight: 700; line-height: 1.2;
+  color: var(--f1-tinta);
+}
+@keyframes f1-girar { from { transform: rotate(-200deg); opacity: 0; } to { transform: none; opacity: 1; } }
 [data-testid="stMainBlockContainer"] h3 { font-weight: 700; color: var(--f1-tinta); }
 
 /* ---------- Métricas como tablero de tiempos ---------- */
@@ -126,8 +155,23 @@ h1 {
 
 /* Gráficos e iframe: tarjeta con borde fino, como un panel de transmisión */
 [data-testid="stVegaLiteChart"], [data-testid="stIFrame"] {
-  border: 1px solid var(--f1-carril); border-radius: 4px; overflow: hidden;
+  border: 1px solid var(--f1-carril); border-radius: 6px; overflow: hidden;
+  background: var(--f1-asfalto); box-sizing: border-box;
 }
+[data-testid="stVegaLiteChart"] { padding: 12px 18px 16px; }
+/* Controles dentro de los gráficos (temporada, pasos, casillas): con aire y alineados */
+[data-testid="stVegaLiteChart"] .vega-bindings {
+  display: flex !important; flex-wrap: wrap; align-items: center; gap: 12px 30px;
+  margin-top: 14px !important; padding: 14px 20px !important; box-sizing: border-box;
+  background: #1F2025; border: 1px solid var(--f1-carril); border-radius: 6px;
+}
+[data-testid="stVegaLiteChart"] .vega-bind { display: flex !important; margin: 0 !important; align-items: center; gap: 8px; }
+.vega-bind-name { min-width: 0 !important; margin-right: 4px; color: var(--f1-tinta-suave); }
+.vega-bind select {
+  background: var(--f1-carbono); color: var(--f1-tinta); border: 1px solid var(--f1-carril);
+  border-radius: 4px; padding: 5px 10px; font: inherit;
+}
+.vega-bind-radio label { margin-right: 12px; }
 
 /* ---------- Pie ---------- */
 .f1-pie {
@@ -140,8 +184,13 @@ h1 {
 @media (max-width: 640px) {
   .f1-hero .f1-marca b { font-size: 1.1rem; }
   .f1-hero::after { width: 60px; }
-  .f1-escuderia { flex-basis: 60px; font-size: .6rem; }
+  .f1-escuderia { flex-basis: 25%; }
+}
+@media (max-width: 640px) {
+  .f1-seccion h2 { font-size: 1.5rem; padding-right: 0; }
+  .f1-seccion .f1-rueda { width: 42px; height: 42px; }
+  .f1-seccion::after, .f1-hero::before { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .f1-escuderia { transition: none; }
+  .f1-seccion .f1-rueda { animation: none; }
 }
