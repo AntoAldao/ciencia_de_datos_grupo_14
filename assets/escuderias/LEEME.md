@@ -12,7 +12,11 @@ Los `TeamId` son los del dataset: `mclaren`, `ferrari`, `mercedes`, `red_bull`, 
 `aston_martin`, `alpine`, `haas`, `rb`, `audi`, `cadillac` (y los de temporadas anteriores:
 `alphatauri`, `toro_rosso`, `sauber`, `alfa`, `renault`, `force_india`, `racing_point`).
 
-Los logos se muestran en blanco (el fondo es oscuro), salvo los de `LOGO_EN_COLOR` en `estilo.py`.
+Los logos se muestran con sus colores originales. Además del encabezado, aparecen en el gráfico
+«¿A qué escuderías lee mejor?» (Explorá) y en la carrera simulada (`graficos/logos.py`).
+
+Los de las escuderías anteriores (alphatauri, toro_rosso, sauber, alfa, renault, force_india,
+racing_point) y `rb` (Visa Cash App Racing Bulls) salen de Wikipedia / Wikimedia Commons.
 
 Los logos son marcas registradas de cada equipo: usarlos solo en el contexto académico del
 proyecto y revisar la licencia de donde se descarguen.

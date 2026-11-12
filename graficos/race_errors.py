@@ -3,7 +3,7 @@
 Tres paneles alineados por fecha:
 
 1. MAE de cada carrera del modelo (azul) y de la grilla usada como predicción (ámbar).
-2. Diferencia `MAE grilla − MAE modelo` (▲ menta = el modelo acertó mejor; ▼ frambuesa = peor).
+2. Diferencia `MAE grilla − MAE modelo` (▲ verde = el modelo acertó mejor; ▼ vino = peor).
 3. Cuántos pilotos no terminaron esa carrera (con sus siglas en el tooltip).
 
 Una casilla cambia a la versión ajustada por abandonos (los que no terminaron van al fondo, en el
@@ -93,7 +93,7 @@ def errors_chart(errors: pd.DataFrame, width: int = 860,
     labels = means.transform_joinaggregate(top="max(mae)").transform_calculate(
         label="'promedio ' + lower(datum.who_label) + ' ' + format(datum.mae, '.2f')")
     mean_txt = alt.layer(*[
-        labels.transform_filter(cond).mark_text(align="left", dx=4, dy=dy, fontSize=10).encode(
+        labels.transform_filter(cond).mark_text(align="left", dx=4, dy=dy, fontSize=12).encode(
             x=alt.value(width + 2), y="mae:Q", text="label:N", color=who)
         for cond, dy in [("datum.mae == datum.top", -7), ("datum.mae < datum.top", 8)]])
     p1 = alt.layer(rule, mean_lines, grid_dots, model_dots, mean_txt).properties(
@@ -104,7 +104,7 @@ def errors_chart(errors: pd.DataFrame, width: int = 860,
                       "mejor). La grilla es usar la largada como predicción.",
                       "Modelo: punto azul; grilla: anillo ámbar (si empatan se ven los dos). "
                       "Líneas punteadas: promedio de la temporada."],
-            color=INK, subtitleColor=INK_MUTED, anchor="start", fontSize=15))
+            color=INK, subtitleColor=INK_MUTED, anchor="start", fontSize=17))
 
     # 2. Diferencia: positivo = el modelo acertó mejor que la grilla.
     tone = alt.Color("tone:N", scale=alt.Scale(domain=["mejor", "peor", "igual"],
@@ -114,14 +114,14 @@ def errors_chart(errors: pd.DataFrame, width: int = 860,
         color=tone, tooltip=tooltip)
     # flecha justo afuera de la punta de la barra (arriba si es positiva, abajo si no)
     arrows = base.transform_calculate(
-        ay="datum.diff + (datum.diff >= 0 ? 1 : -1) * 0.12").mark_text(fontSize=10).encode(
+        ay="datum.diff + (datum.diff >= 0 ? 1 : -1) * 0.12").mark_text(fontSize=12).encode(
         x=x, y="ay:Q", text="mark:N", color=tone)
     zero = alt.Chart(pd.DataFrame({"y": [0]})).mark_rule(color=INK_MUTED).encode(y="y:Q")
     p2 = alt.layer(zero, bars, arrows).properties(
         width=width, height=150, title=alt.Title(
             "¿Quién acertó mejor?",
-            subtitle="▲ menta: el modelo se equivocó menos que la grilla; ▼ frambuesa: más.",
-            color=INK, subtitleColor=INK_MUTED, anchor="start", fontSize=13))
+            subtitle="▲ verde: el modelo se equivocó menos que la grilla; ▼ vino: más.",
+            color=INK, subtitleColor=INK_MUTED, anchor="start", fontSize=15))
 
     # 3. Abandonos por carrera (otra medida: panel aparte, no segundo eje).
     p3 = alt.layer(
@@ -129,9 +129,9 @@ def errors_chart(errors: pd.DataFrame, width: int = 860,
                       cornerRadiusEnd=3).encode(
             x=x, y=alt.Y("dnf:Q", title="No terminaron", axis=alt.Axis(tickMinStep=1, **axis)),
             tooltip=tooltip),
-        base.mark_text(dy=-7, fontSize=10, color=INK).encode(x=x, y="dnf:Q", text="dnf:Q"),
+        base.mark_text(dy=-7, fontSize=12, color=INK).encode(x=x, y="dnf:Q", text="dnf:Q"),
     ).properties(width=width, height=110, title=alt.Title(
-        "Pilotos que no terminaron", color=INK, anchor="start", fontSize=13))
+        "Pilotos que no terminaron", color=INK, anchor="start", fontSize=15))
 
     return alt.vconcat(p1, p2, p3, spacing=24).add_params(ajuste).resolve_scale(
         color="independent").configure(

@@ -88,6 +88,8 @@ ultima = ultima[ultima["RoundNumber"] == ultima["RoundNumber"].max()]
 equipos = (ultima.groupby("TeamId")["TeamPoints_Before"].max()
            .sort_values(ascending=False).index.tolist())
 estilo.encabezado(equipos, f"Ciencia de Datos · UTN FRM · 2026")
+estilo.menu(tallo=["Los abandonos", "La grilla manda", "Modelo vs. grilla"],
+            copa=["Explorá las carreras", "Probá el modelo"])
 st.title("¿Se puede anticipar en qué puesto termina cada piloto de F1 con lo que se sabe "
          "antes de la carrera?")
 st.subheader("El modelo ordena mejor que la grilla a los pilotos que terminan la carrera, pero los "
@@ -105,6 +107,7 @@ st.caption(f"Test: las {test['carreras']} carreras de {ANIO_TEST}, que el modelo
            "entrenar. Error = cuántos puestos se equivoca en promedio con cada piloto.")
 
 st.divider()
+estilo.parte("tallo", "El tallo", "Te lo contamos en tres sectores")
 
 # ----------------------------------------------------------------------------------------------
 # TALLO: cada sección = título que afirma + gráfico + «Cómo lo sabemos» (cerrado por defecto).
@@ -205,11 +208,12 @@ st.divider()
 # ----------------------------------------------------------------------------------------------
 # COPA: la maneja el usuario.
 # ----------------------------------------------------------------------------------------------
+estilo.parte("copa", "La copa", "Ahora manejás vos: explorá las carreras o probá el modelo")
 tab_explora, tab_prueba = st.tabs(["Explorá", "Probá el modelo"])
 
 with tab_explora:
     st.subheader("Primero, todas las carreras")
-    st.altair_chart(panorama.panorama(df, width=620), theme=None)
+    st.altair_chart(panorama.panorama(df, width=450), theme=None)
     st.caption("Cada carrera la predice un modelo que no la vio. Elegí una temporada en el menú, "
                "arrastrá sobre la nube para quedarte con un grupo de carreras y hacé clic en la "
                "leyenda para resaltar dónde ganó cada uno.")
@@ -227,14 +231,14 @@ with tab_explora:
         ["Error por carrera", "Campeonato", "Carrera por carrera", "Por qué el modelo mueve a cada piloto"])
     with sub_error:
         st.altair_chart(race_errors.errors_chart(race_errors.race_errors(tabla),
-                                                 model_name=nombre_modelo, width=1200), theme=None)
+                                                 model_name=nombre_modelo, width=980), theme=None)
     with sub_campeonato:
         st.altair_chart(season_points.points_chart(season_points.season_points(tabla),
-                                                   model_name=nombre_modelo, width=1200), theme=None)
+                                                   model_name=nombre_modelo, width=980), theme=None)
     with sub_autos:
         # HTML propio: lleva el botón «Correr» que anima la carrera.
         st.iframe(race_cars.to_html(race_cars.race_cars_compare(
-            tabla, model_name=nombre_modelo, width=1100)))
+            tabla, model_name=nombre_modelo, width=1000)))
     with sub_porque:
         es_anio = (df["Year"] == anio).to_numpy()
         contrib = model_moves.contributions(

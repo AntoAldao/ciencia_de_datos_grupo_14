@@ -134,7 +134,7 @@ def grafico_pasos(pred: pd.DataFrame, test: dict, anio_test: int = 2026,
                                           f"{f(t['mae_grilla_sin_abandonos'])}: los abandonos tapaban la ventaja."},
     ])
     texto = alt.Chart(relato).transform_filter("datum.paso == paso").mark_text(
-        align="left", baseline="top", fontSize=14, color=C.INK
+        align="left", baseline="top", fontSize=16, color=C.INK
     ).transform_calculate(px="8 + datum.linea * 22").encode(
         x=alt.value(8), y=alt.Y("px:Q", scale=None), text="texto:N")
 
@@ -148,10 +148,10 @@ def grafico_pasos(pred: pd.DataFrame, test: dict, anio_test: int = 2026,
     texto4 = alt.Chart(por_anio.melt(id_vars="Year", value_vars=["l0", "l1"], var_name="l", value_name="texto")
                        ).transform_filter("paso == 4 && datum.Year == anio").transform_calculate(
         linea="datum.l == 'l0' ? 0 : 1").mark_text(
-        align="left", baseline="top", fontSize=14, color=C.INK
+        align="left", baseline="top", fontSize=16, color=C.INK
     ).transform_calculate(px="8 + datum.linea * 22").encode(
         x=alt.value(8), y=alt.Y("px:Q", scale=None), text="texto:N")
 
     return alt.layer(barras, cero, texto, texto4).add_params(paso, anio, sin_ab).properties(width=width, height=height).configure(
-        background=C.ASPHALT, padding={"left": 16, "right": 16, "top": 16, "bottom": 8}
-    ).configure_view(stroke=None, fill=C.ASPHALT).configure_text(font=C.FUENTE)
+        background=C.FONDO, padding={"left": 16, "right": 16, "top": 16, "bottom": 8}
+    ).configure_view(stroke=None, fill=C.FONDO).configure_text(font=C.FUENTE)

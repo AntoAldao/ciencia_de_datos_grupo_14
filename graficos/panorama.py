@@ -21,6 +21,7 @@ import altair as alt
 import pandas as pd
 
 from graficos import colores as C
+from graficos import logos
 
 
 def tabla(pred: pd.DataFrame) -> pd.DataFrame:
@@ -37,10 +38,10 @@ def tabla(pred: pd.DataFrame) -> pd.DataFrame:
                                   gp_abandonos=("abandono", "sum"))
     gp["gp_quien"] = (gp["gp_modelo"] < gp["gp_grilla"]).map({True: "Mejor el modelo", False: "Mejor la grilla"})
     d = d.join(gp, on="Carrera")
-    d["Escudería"] = d["TeamId"].str.replace("_", " ").str.title()
+    d["Escudería"] = d["TeamId"].map(logos.nombre)
     d["Ganador"] = d.groupby("Carrera")["DriverId"].transform(
         lambda s: s.loc[d.loc[s.index, "Puesto"].idxmin()]).str.replace("_", " ").str.title()
-    return d[["Year", "RoundNumber", "Carrera", "Escudería", "Ganador", "err_modelo", "err_grilla",
+    return d[["Year", "RoundNumber", "Carrera", "TeamId", "Escudería", "Ganador", "err_modelo", "err_grilla",
               "abandono", "gp_modelo", "gp_grilla", "gp_abandonos", "gp_quien"]]
 
 
@@ -66,10 +67,10 @@ def panorama(pred: pd.DataFrame, width: int = 430) -> alt.VConcatChart:
     carreras = base.transform_aggregate(
         gp_modelo="mean(gp_modelo)", gp_grilla="mean(gp_grilla)", gp_abandonos="mean(gp_abandonos)",
         groupby=["Carrera", "Year", "gp_quien", "Ganador"]
-    ).mark_circle(size=70, stroke=C.ASPHALT, strokeWidth=0.8).encode(
+    ).mark_circle(size=70, stroke=C.FONDO, strokeWidth=0.8).encode(
         x=alt.X("gp_grilla:Q", title="Error de la grilla en el GP (puestos)", scale=escala, axis=alt.Axis(**eje)),
         y=alt.Y("gp_modelo:Q", title="Error del modelo en el GP (puestos)", scale=escala, axis=alt.Axis(**eje)),
-        color=alt.condition(brush, color_quien, alt.value(C.LANE)),
+        color=alt.condition(brush, color_quien, alt.value(C.LINEA)),
         opacity=alt.condition(quien, alt.value(0.9), alt.value(0.12)),
         tooltip=[alt.Tooltip("Carrera:N"), alt.Tooltip("Ganador:N"),
                  alt.Tooltip("gp_grilla:Q", title="Error grilla", format=".2f"),
@@ -79,7 +80,7 @@ def panorama(pred: pd.DataFrame, width: int = 430) -> alt.VConcatChart:
     diagonal = alt.Chart(pd.DataFrame({"a": [0, lim]})).mark_line(
         color=C.INK_MUTED, strokeDash=[5, 5]).encode(x="a:Q", y="a:Q")
     rotulo = alt.Chart(pd.DataFrame({"x": [lim * 0.97], "y": [lim * 0.06], "t": ["debajo: mejor el modelo"]})
-                       ).mark_text(align="right", color=C.INK_MUTED, fontSize=11).encode(
+                       ).mark_text(align="right", color=C.INK_MUTED, fontSize=13).encode(
         x="x:Q", y="y:Q", text="t:N")
     nube = (diagonal + carreras + rotulo).properties(
         width=width, height=width, title=alt.Title("Cada punto es un Gran Premio",
@@ -88,20 +89,32 @@ def panorama(pred: pd.DataFrame, width: int = 430) -> alt.VConcatChart:
 
     # 2 · error medio por escudería, en las carreras elegidas
     filtrado = base.transform_filter(brush)
-    equipos = filtrado.transform_fold(
-        ["err_grilla", "err_modelo"], as_=["serie", "error"]
-    ).transform_calculate(
+    plegado = filtrado.transform_fold(["err_grilla", "err_modelo"], as_=["serie", "error"])
+    orden = alt.EncodingSortField("error", op="mean", order="descending")
+    eje_y = alt.Y("Escudería:N", sort=orden, title=None,
+                  axis=alt.Axis(labelColor=C.INK, labelFontSize=14,
+                                **{k: v for k, v in eje.items() if k != "labelColor"}))
+    barras = plegado.transform_calculate(
         Predicción="datum.serie == 'err_modelo' ? 'Modelo' : 'Grilla'"
     ).mark_bar(height={"band": 0.8}).encode(
-        y=alt.Y("Escudería:N", sort=alt.EncodingSortField("error", op="mean", order="descending"),
-                title=None, axis=alt.Axis(labelColor=C.INK, **{k: v for k, v in eje.items() if k != "labelColor"})),
+        y=eje_y,
         yOffset=alt.YOffset("Predicción:N", sort=["Grilla", "Modelo"]),
         x=alt.X("mean(error):Q", title="Error medio por piloto (puestos)", axis=alt.Axis(**eje)),
         color=alt.Color("Predicción:N", scale=alt.Scale(domain=["Grilla", "Modelo"], range=[C.GRILLA, C.MODELO]),
                         legend=alt.Legend(orient="top", title=None, labelColor=C.INK)),
         tooltip=["Escudería:N", "Predicción:N", alt.Tooltip("mean(error):Q", title="Error medio", format=".2f"),
                  alt.Tooltip("count():Q", title="Pilotos-carrera")],
-    ).properties(width=width - 60, height=width, title=alt.Title(
+    )
+    # Logo de cada escudería a la derecha de sus barras (mismo orden que el eje).
+    ancho_barras = width - 60
+    escudos = plegado.transform_aggregate(
+        error="mean(error)", groupby=["Escudería", "TeamId"]
+    ).transform_lookup(
+        lookup="TeamId", from_=alt.LookupData(logos.tabla(d["TeamId"]), "team", ["logo"])
+    ).transform_filter("datum.logo != ''").mark_image(width=56, height=26).encode(
+        y=eje_y, x=alt.value(ancho_barras + 40), url="logo:N",
+        tooltip=["Escudería:N"])
+    equipos = alt.layer(barras, escudos).properties(width=ancho_barras, height=width, title=alt.Title(
         "¿A qué escuderías lee mejor?", subtitle="Solo las carreras elegidas a la izquierda.",
         color=C.INK, subtitleColor=C.INK_MUTED, anchor="start"))
 
@@ -113,9 +126,9 @@ def panorama(pred: pd.DataFrame, width: int = 430) -> alt.VConcatChart:
         texto="datum.carreras + ' carreras elegidas · error del modelo ' + replace(format(datum.modelo, '.2f'), '.', ',')"
               " + ' · de la grilla ' + replace(format(datum.grilla, '.2f'), '.', ',') + ' · ' + datum.abandonos"
               " + ' abandonos de ' + datum.pilotos + ' pilotos'"
-    ).mark_text(align="left", fontSize=14, color=C.INK).encode(x=alt.value(0), y=alt.value(10), text="texto:N"
+    ).mark_text(align="left", fontSize=16, color=C.INK).encode(x=alt.value(0), y=alt.value(10), text="texto:N"
     ).properties(width=2 * width, height=20)
 
-    return alt.vconcat(alt.hconcat(nube, equipos, spacing=50).resolve_scale(color="independent"), resumen, spacing=18).add_params(
-        temporada).configure(background=C.ASPHALT, padding=16).configure_view(
-        stroke=None, fill=C.ASPHALT).configure_text(font=C.FUENTE).configure_title(fontSize=15)
+    return alt.vconcat(alt.hconcat(nube, equipos, spacing=60).resolve_scale(color="independent"), resumen, spacing=18).add_params(
+        temporada).configure(background=C.FONDO, padding=16).configure_view(
+        stroke=None, fill=C.FONDO).configure_text(font=C.FUENTE).configure_title(fontSize=18)

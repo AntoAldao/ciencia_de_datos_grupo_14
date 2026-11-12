@@ -175,12 +175,12 @@ def moves_chart(contrib: pd.DataFrame, width: int = 620, row_height: int = 24,
     )
     top = alt.layer(
         summary_bars.mark_bar(cornerRadiusEnd=4, height=14).encode(color=color),
-        summary_bars.mark_text(align="left", dx=4, color=INK, fontSize=11).encode(text="label:N"),
+        summary_bars.mark_text(align="left", dx=4, color=INK, fontSize=13).encode(text="label:N"),
     ).properties(width=width, height=22 * len(groups), title=alt.Title(
         "Qué mueve al modelo en promedio",
         subtitle="lugares de grilla que cada grupo corre a un piloto (hacia adelante o atrás), "
                  "promedio de todos los pilotos de todas las carreras",
-        color=INK, subtitleColor=INK_MUTED, anchor="start", fontSize=14))
+        color=INK, subtitleColor=INK_MUTED, anchor="start", fontSize=16))
 
     # Glosario: qué mide cada grupo (nombre y una línea de explicación).
     gloss = pd.DataFrame({"group": groups, "i": range(len(groups)),
@@ -188,12 +188,12 @@ def moves_chart(contrib: pd.DataFrame, width: int = 620, row_height: int = 24,
     g_base = alt.Chart(gloss).encode(y=alt.Y("i:O", axis=None))
     glossary = alt.layer(
         g_base.mark_square(size=90).encode(x=alt.value(6), color=color),
-        g_base.mark_text(align="left", dx=18, dy=-7, color=INK, fontSize=12,
+        g_base.mark_text(align="left", dx=18, dy=-7, color=INK, fontSize=14,
                          fontWeight="bold").encode(x=alt.value(0), text="group:N"),
-        g_base.mark_text(align="left", dx=18, dy=8, color=INK_MUTED, fontSize=11).encode(
+        g_base.mark_text(align="left", dx=18, dy=8, color=INK_MUTED, fontSize=13).encode(
             x=alt.value(0), text="help:N"),
     ).properties(width=width + 200, height=36 * len(groups), title=alt.Title(
-        "Qué mide cada grupo", color=INK, anchor="start", fontSize=14))
+        "Qué mide cada grupo", color=INK, anchor="start", fontSize=16))
 
     # Abajo: la carrera elegida, un renglón por piloto ordenado por largada.
     help_df = pd.DataFrame({"group": list(GROUP_HELP), "help": list(GROUP_HELP.values())})
@@ -210,7 +210,7 @@ def moves_chart(contrib: pd.DataFrame, width: int = 620, row_height: int = 24,
     )
     n_rows = int(contrib.groupby("race")["driver"].nunique().max())
     y = alt.Y("row:N", sort=alt.EncodingSortField("grid", op="min", order="ascending"), title=None,
-              axis=alt.Axis(labelFont="monospace", labelFontSize=11, labelColor=INK, ticks=False,
+              axis=alt.Axis(labelFont="monospace", labelFontSize=13, labelColor=INK, ticks=False,
                             domain=False, labelPadding=8, grid=False))
     tooltip = [alt.Tooltip("driver_id:N", title="Piloto"), alt.Tooltip("group:N", title="Grupo"),
                alt.Tooltip("value_txt:N", title="Su valor"),
@@ -231,7 +231,7 @@ def moves_chart(contrib: pd.DataFrame, width: int = 620, row_height: int = 24,
         y=y, x="total:Q", tooltip=[alt.Tooltip("driver_id:N", title="Piloto"),
                                    alt.Tooltip("total_txt:N", title="Total (lugares de grilla)"),
                                    alt.Tooltip("move:N", title="Posición")])
-    move_txt = totals.mark_text(align="left", color=INK_MUTED, fontSize=11,
+    move_txt = totals.mark_text(align="left", color=INK_MUTED, fontSize=13,
                                 font="monospace").encode(
         y=y, x=alt.value(width + 8), text="move:N")
     bottom = alt.layer(zero, bars, total_mark, move_txt).properties(
@@ -239,12 +239,12 @@ def moves_chart(contrib: pd.DataFrame, width: int = 620, row_height: int = 24,
         title=alt.Title(
             f"Por qué el modelo ({model_name}) mueve a cada piloto",
             subtitle=["La largada es la base: cada barra es cuántos lugares de grilla corre "
-                      "al piloto ese grupo (derecha = lo adelanta). Raya blanca: total.",
+                      "al piloto ese grupo (derecha = lo adelanta). Raya negra: total.",
                       "Ordenar por largada − total da la predicción del modelo (a la derecha: "
                       "largada → predicción, y el resultado real). ✕ = no terminó.",
                       "Pasá el mouse por una barra para ver el valor del piloto (ej. cuántos "
                       "puntos tiene menos que el líder)."],
-            color=INK, subtitleColor=INK_MUTED, anchor="start", fontSize=14))
+            color=INK, subtitleColor=INK_MUTED, anchor="start", fontSize=16))
 
     chart = alt.vconcat(top, glossary, bottom, spacing=30).add_params(carrera, abandonos).configure(
         background=ASPHALT, padding={"left": 20, "right": 220, "top": 16, "bottom": 16}

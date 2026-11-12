@@ -1,11 +1,14 @@
-"""Look and feel F1 de la app: CSS, encabezado, títulos de sección y pie.
+"""Look and feel F1 de la app: CSS, menú lateral, encabezado, títulos de sección y pie.
 
-Solo decoración: no cambia ningún dato ni texto del análisis. Los archivos están en `assets/`:
-  estilo.css            el estilo de la interfaz (piano, bandera a cuadros, tablero de tiempos)
+Solo decoración y navegación: no cambia ningún dato ni texto del análisis. Archivos en `assets/`:
+  estilo.css            el estilo de la interfaz (papel, piano, bandera a cuadros)
   logo.svg              logo de la Fórmula 1
   escuderias/<TeamId>   logos de cada equipo (ver assets/escuderias/LEEME.md)
-  tires/                neumáticos: uno por sección del tallo (blanda, media, dura)
+  tires/                neumáticos: uno por sección del tallo (blando, medio, duro)
   circuit1..4.svg       trazados de circuitos, de marca de agua en los títulos
+
+La app es una copa de martini: el tallo (secciones 1 a 3) lo guía el autor y la copa (Explorá y
+Probá el modelo) la maneja el usuario. El menú lateral muestra esas dos partes.
 """
 from __future__ import annotations
 
@@ -19,20 +22,10 @@ import streamlit as st
 from PIL import Image
 
 from graficos import colores as C
+from graficos import logos
 
 ASSETS = Path(__file__).resolve().parent / "assets"
 _MIME = {".svg": "image/svg+xml", ".png": "image/png", ".webp": "image/webp"}
-
-# Nombre de cada escudería (texto alternativo del logo, o el nombre si no hay logo).
-NOMBRES = {
-    "mclaren": "McLaren", "ferrari": "Ferrari", "mercedes": "Mercedes", "red_bull": "Red Bull",
-    "williams": "Williams", "aston_martin": "Aston Martin", "alpine": "Alpine", "haas": "Haas",
-    "rb": "Racing Bulls", "alphatauri": "AlphaTauri", "toro_rosso": "Toro Rosso",
-    "sauber": "Sauber", "alfa": "Alfa Romeo", "audi": "Audi", "cadillac": "Cadillac",
-    "renault": "Renault", "force_india": "Force India", "racing_point": "Racing Point",
-}
-# Logos que se muestran con sus colores; el resto va en blanco (son oscuros sobre fondo oscuro).
-LOGO_EN_COLOR = {"ferrari"}
 
 # Neumático y circuito de cada sección del tallo (como los compuestos de una carrera).
 RUEDAS = {1: "soft", 2: "medium", 3: "hard"}
@@ -54,20 +47,14 @@ def _data_uri(ruta: Path, alto: int = 0) -> str:
     return f"data:{mime};base64,{base64.b64encode(datos).decode()}"
 
 
-@lru_cache(maxsize=None)
-def _circuito(nombre: str) -> str:
-    """Trazado de circuito en tinta clara (los SVG vienen en negro)."""
-    svg = (ASSETS / f"{nombre}.svg").read_text(encoding="utf-8")
-    svg = svg.replace('fill="#000000"', f'fill="{C.INK}"')
-    return f"data:image/svg+xml;base64,{base64.b64encode(svg.encode()).decode()}"
+def _rueda(numero: int, alto: int = 160) -> str:
+    compuesto = RUEDAS.get(numero, "hard")
+    ruta = next(p for ext in (".webp", ".png") if (p := ASSETS / "tires" / f"{compuesto}{ext}").exists())
+    return _data_uri(ruta, alto)
 
 
-def _rueda(compuesto: str) -> Path:
-    return next(p for ext in (".webp", ".png") if (p := ASSETS / "tires" / f"{compuesto}{ext}").exists())
-
-
-def _logo_escuderia(team: str) -> Path | None:
-    return next((p for ext in _MIME if (p := ASSETS / "escuderias" / f"{team}{ext}").exists()), None)
+def _circuito(numero: int) -> str:
+    return _data_uri(ASSETS / f"{CIRCUITOS.get(numero, 'circuit4')}.svg")
 
 
 def aplicar() -> None:
@@ -75,31 +62,58 @@ def aplicar() -> None:
     st.html(f"<style>{(ASSETS / 'estilo.css').read_text(encoding='utf-8')}</style>")
 
 
+def menu(tallo: list[str], copa: list[str]) -> None:
+    """Menú lateral: el recorrido de la copa de martini, con enlaces a cada parte."""
+    pasos_tallo = "".join(
+        f'<a class="f1-nav-item" href="#seccion-{i}"><img src="{_rueda(i, 64)}" alt="">'
+        f'<span><small>Sector {i}</small>{html.escape(t)}</span></a>'
+        for i, t in enumerate(tallo, start=1))
+    pasos_copa = "".join(
+        f'<a class="f1-nav-item copa" href="#copa"><i>{"⌕" if i == 0 else "⚙"}</i>'
+        f'<span>{html.escape(t)}</span></a>' for i, t in enumerate(copa))
+    st.sidebar.html(
+        f'<div class="f1-nav">'
+        f'<a class="f1-nav-logo" href="#portada"><img src="{_data_uri(ASSETS / "logo.svg")}" '
+        f'alt="Fórmula 1"><b>Grupo 14</b></a>'
+        f'<a class="f1-nav-item portada" href="#portada"><i>🏁</i><span>La pregunta</span></a>'
+        f'<div class="f1-nav-parte"><b>El tallo</b><span>te lo contamos, paso a paso</span></div>'
+        f'<div class="f1-nav-grupo">{pasos_tallo}</div>'
+        f'<div class="f1-nav-parte"><b>La copa</b><span>ahora manejás vos</span></div>'
+        f'<div class="f1-nav-grupo copa">{pasos_copa}</div>'
+        f'</div>')
+
+
 def encabezado(equipos: list[str], subtitulo: str) -> None:
     """Logo F1, marca del grupo y la banda de escuderías (decorativa, no se puede tocar)."""
     items = []
     for team in equipos:
-        nombre = NOMBRES.get(team, team.replace("_", " ").title())
-        color = C.ESCUDERIAS.get(team, C.ESCUDERIA_DEFECTO)
-        logo = _logo_escuderia(team)
-        clase = "f1-logo color" if team in LOGO_EN_COLOR else "f1-logo"
-        dentro = (f'<img class="{clase}" src="{_data_uri(logo)}" alt="{html.escape(nombre)}">'
-                  if logo else f'<span>{html.escape(nombre)}</span>')
-        items.append(f'<div class="f1-escuderia" style="--equipo:{color}">{dentro}</div>')
+        nombre = logos.nombre(team)
+        logo = logos.uri(team)
+        dentro = (f'<img src="{logo}" alt="{html.escape(nombre)}">' if logo
+                  else f'<span>{html.escape(nombre)}</span>')
+        items.append(f'<div class="f1-escuderia" style="--equipo:{_color(team)}">{dentro}</div>')
     st.html(
-        f'<div class="f1-hero" style="--circuito:url({_circuito("circuit4")})">'
+        f'<div id="portada" class="f1-hero" style="--circuito:url({_circuito(4)})">'
         f'<img class="f1-hero-logo" src="{_data_uri(ASSETS / "logo.svg")}" alt="Fórmula 1">'
         f'<div class="f1-marca"><b>Grupo 14</b><span>{html.escape(subtitulo)}</span></div></div>'
         f'<div class="f1-parrilla" role="img" aria-label="Escuderías">{"".join(items)}</div>')
 
 
+def _color(team: str) -> str:
+    return C.ESCUDERIAS.get(team, C.ESCUDERIA_DEFECTO)
+
+
+def parte(id_: str, nombre: str, bajada: str) -> None:
+    """Rótulo que marca dónde empieza el tallo o la copa (y ancla del menú)."""
+    st.html(f'<div id="{id_}" class="f1-parte"><b>{html.escape(nombre)}</b>'
+            f'<span>{html.escape(bajada)}</span></div>')
+
+
 def seccion(numero: int, titulo: str) -> None:
     """Título de una sección del tallo: neumático + título + trazado de circuito de fondo."""
-    rueda = _data_uri(_rueda(RUEDAS.get(numero, "hard")), alto=160)
-    circuito = _circuito(CIRCUITOS.get(numero, "circuit4"))
     st.html(
-        f'<div class="f1-seccion" style="--circuito:url({circuito})">'
-        f'<img class="f1-rueda" src="{rueda}" alt="">'
+        f'<div id="seccion-{numero}" class="f1-seccion" style="--circuito:url({_circuito(numero)})">'
+        f'<img class="f1-rueda" src="{_rueda(numero)}" alt="">'
         f'<h2>{html.escape(f"{numero}. {titulo}")}</h2></div>')
 
 

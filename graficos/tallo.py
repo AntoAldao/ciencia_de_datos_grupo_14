@@ -48,12 +48,12 @@ def abandonos_por_temporada(df: pd.DataFrame, width: int = 760) -> alt.TopLevelM
     barras = base.mark_bar(color=DNF_COLOR, cornerRadiusEnd=3, width=alt.RelativeBandSize(0.6)
                            ).encode(y=alt.Y("pct:Q", title="% de pilotos que no terminó",
                                             axis=alt.Axis(format="%", **AXIS)), tooltip=tooltip)
-    etiquetas = base.mark_text(dy=-7, color=INK, fontSize=11).encode(
+    etiquetas = base.mark_text(dy=-7, color=INK, fontSize=13).encode(
         y="pct:Q", text=alt.Text("pct:Q", format=".0%"))
     linea = alt.Chart(pd.DataFrame({"y": [promedio]})).mark_rule(
         color=INK_MUTED, strokeDash=[4, 4]).encode(y="y:Q")
     texto = alt.Chart(pd.DataFrame({"y": [promedio], "t": [f"promedio {promedio:.0%}"]})).mark_text(
-        align="left", dx=4, dy=-6, color=INK_MUTED, fontSize=11).encode(
+        align="left", dx=4, dy=-6, color=INK_MUTED, fontSize=13).encode(
         y="y:Q", x=alt.value(0), text="t:N")
     return _estilo(alt.layer(barras, etiquetas, linea, texto).properties(width=width, height=260))
 
@@ -73,7 +73,9 @@ def grilla_vs_final(df: pd.DataFrame, width: int = 520) -> alt.TopLevelMixin:
         x=alt.X("final:N", sort=orden, title="Terminó en el puesto",
                 axis=alt.Axis(labelAngle=0, orient="top", **AXIS)))
     celdas = base.mark_rect(stroke=ASPHALT, strokeWidth=2).encode(
-        color=alt.Color("pct:Q", scale=alt.Scale(range=["#3a2d27", GRID_ORANGE], domain=[0, 0.8]),
+        color=alt.Color("pct:Q", scale=alt.Scale(range=["#FBF3E6", GRID_ORANGE], domain=[0, 0.8]),
                         legend=None), tooltip=tooltip)
-    texto = base.mark_text(fontSize=14, color=INK).encode(text=alt.Text("pct:Q", format=".0%"))
+    texto = base.mark_text(fontSize=17).encode(
+        text=alt.Text("pct:Q", format=".0%"),
+        color=alt.condition("datum.pct > 0.45", alt.value("#FFFFFF"), alt.value(INK)))
     return _estilo(alt.layer(celdas, texto).properties(width=width, height=width * 0.75))
