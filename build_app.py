@@ -24,6 +24,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from sklearn import config_context
+from sklearn.base import clone
 
 import modelo_entrega3 as m3
 
@@ -131,6 +133,62 @@ def medir(d: pd.DataFrame) -> dict:
     return res
 
 
+def predecir_fuera_de_muestra(guardado: dict, df: pd.DataFrame):
+    """Puntaje y aportes de cada fila, predichos por un modelo que NO vio esa fila.
+
+    - 2018-2025: validación cruzada por temporada, como en el notebook. Para cada temporada se
+      entrena una copia del modelo elegido (mismo pipeline e hiperparámetros) con las demás
+      temporadas de entrenamiento y se predice esa.
+    - 2026 (test): el modelo final que guardó el notebook, entrenado con 2018-2025.
+    Así, lo que el usuario ve en «Explorá» es lo que el modelo hubiera dicho sin conocer la carrera.
+    """
+    entrada = guardado["entrada"]
+    puntaje = pd.Series(np.nan, index=df.index)
+    partes = []
+    es_test = df["conjunto"] == "test"
+    puntaje[es_test] = m3.puntaje(guardado, df[es_test])
+    partes.append(m3.aportes(guardado, df[es_test]))
+
+    entrena = df[~es_test]
+    objetivo = (entrena["Puesto"] - 1) / (entrena["Autos_en_carrera"] - 1)   # Puesto_01 del notebook
+    for anio in sorted(entrena["Year"].unique()):
+        afuera = entrena["Year"] == anio
+        with config_context(transform_output="pandas"):
+            modelo = clone(guardado["modelo"]).fit(entrena.loc[~afuera, entrada], objetivo[~afuera])
+        pliegue = {**guardado, "modelo": modelo}
+        filas = entrena.index[afuera]
+        puntaje[filas] = m3.puntaje(pliegue, df.loc[filas])
+        partes.append(m3.aportes(pliegue, df.loc[filas]))
+
+    df["origen_prediccion"] = np.where(
+        es_test, "modelo final (entrenado con 2018-2025)",
+        "validación cruzada: modelo entrenado sin " + df["Year"].astype(str))
+    aportes = None if any(p is None for p in partes) else pd.concat(partes).loc[df.index]
+    return puntaje.to_numpy(), aportes
+
+
+def verificar_contra_notebook(test: dict, tablas: dict) -> None:
+    """Corta con error si el test de la app no coincide con el que mostró el notebook."""
+    titulo = next((t for t in tablas if t.startswith("Test 2026 (")), None)
+    if titulo is None:
+        print("Aviso: no hay notebook ejecutado para comparar (correr con --entrenar).")
+        return
+    t = tablas[titulo]
+    col = {c: i for i, c in enumerate(t["columnas"])}
+    filas = {f[0]: f for f in t["filas"]}
+    num = lambda x: float(x.replace(".", "").replace(",", "."))  # noqa: E731
+    pares = [("Modelo final", "MAE (puestos)", "mae_modelo"),
+             ("Modelo final", "MAE sin abandonos", "mae_modelo_sin_abandonos"),
+             ("Referencia: grilla sola", "MAE (puestos)", "mae_grilla"),
+             ("Referencia: grilla sola", "MAE sin abandonos", "mae_grilla_sin_abandonos")]
+    for fila, columna, clave in pares:
+        nb = num(next(f for n, f in filas.items() if n.startswith(fila))[col[columna]])
+        assert abs(nb - test[clave]) < 0.0015, (
+            f"{clave}: la app da {test[clave]:.3f} y el notebook {nb:.3f}. "
+            "¿Cambiaron los datos? Correr: python build_app.py --entrenar")
+    print(f"Coincide con el notebook ({titulo}).")
+
+
 def construir(entrenar: bool = False) -> dict:
     crudo = pd.read_parquet(DATOS)
     df, pasos = limpiar(crudo)
@@ -138,7 +196,7 @@ def construir(entrenar: bool = False) -> dict:
         ejecutar_notebook(crudo)
     guardado = m3.cargar()
 
-    df["puntaje"] = m3.puntaje(guardado, df)                                  # 0-1
+    df["puntaje"], aportes = predecir_fuera_de_muestra(guardado, df)          # 0-1
     df["score"] = df["puntaje"] * (df["Autos_en_carrera"] - 1) + 1            # en puestos
     df["puesto_modelo"] = df.groupby("Carrera")["puntaje"].rank(method="average")
     entrada = [c for c in guardado["entrada"] if c != "Carrera"]
@@ -146,7 +204,6 @@ def construir(entrenar: bool = False) -> dict:
 
     SALIDA.mkdir(exist_ok=True)
     df.to_parquet(SALIDA / "predicciones.parquet", index=False)
-    aportes = m3.aportes(guardado, df)
     if aportes is not None:
         pd.concat([df[["Carrera", "DriverId"]], aportes.astype(float)], axis=1).to_parquet(
             SALIDA / "aportes.parquet", index=False)
@@ -159,7 +216,11 @@ def construir(entrenar: bool = False) -> dict:
                                        guardado.get("hiperparametros", {}).items()},
                    "entrada": entrada,
                    "rangos": {c: [float(entrena[c].min()), float(entrena[c].max())]
-                              for c in entrada}},
+                              for c in entrada},
+                   # el 98 % central de lo que vio el entrenamiento: afuera, la app avisa
+                   "habituales": {c: [float(entrena[c].quantile(0.01)), float(entrena[c].quantile(0.99))]
+                                  for c in entrada},
+                   "medianas": {c: float(entrena[c].median()) for c in entrada}},
         "test": medir(df[df["conjunto"] == "test"]),
     }
     (SALIDA / "resumen.json").write_text(json.dumps(resumen, indent=2, ensure_ascii=False),
@@ -167,6 +228,9 @@ def construir(entrenar: bool = False) -> dict:
     if EJECUTADO.exists():
         (SALIDA / "notebook.json").write_text(
             json.dumps(tablas_del_notebook(), indent=2, ensure_ascii=False), encoding="utf-8")
+    if (SALIDA / "notebook.json").exists():
+        verificar_contra_notebook(resumen["test"],
+                                  json.loads((SALIDA / "notebook.json").read_text(encoding="utf-8")))
     return resumen
 
 
