@@ -12,6 +12,10 @@
   --f1-tinta: #1F2328;
   --f1-tinta-suave: #575C63;
   --f1-negro: #15151E;
+  --f1-hueco-input: #EAE3D6;   /* relleno de los desplegables (secondaryBackgroundColor) */
+  --f1-casilla: #F7F4ED;       /* casilla y opción sin marcar, como las de Streamlit */
+  --f1-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4' fill='none' stroke='%231F2328' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --f1-tilde: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --f1-sombra: 0 1px 2px rgba(60, 45, 20, .06), 0 6px 18px rgba(60, 45, 20, .07);
   --f1-kerb: repeating-linear-gradient(90deg, var(--f1-rojo) 0 28px, #FFFFFF 28px 56px);
   --f1-cuadros: conic-gradient(var(--f1-negro) 25%, var(--f1-panel) 0 50%, var(--f1-negro) 0 75%, var(--f1-panel) 0) 0 0 / 12px 12px;
@@ -28,7 +32,7 @@
   font-size: 1rem !important; color: var(--f1-tinta-suave) !important;
 }
 
-/* ---------- Menú lateral: el recorrido de la copa de martini ---------- */
+/* ---------- Menú lateral: el objetivo, lo que encontramos y explorá por tu cuenta ---------- */
 [data-testid="stSidebar"] { border-right: 1px solid var(--f1-borde); }
 .f1-nav { display: flex; flex-direction: column; gap: 4px; padding-top: 4px; }
 .f1-nav a { text-decoration: none !important; color: var(--f1-tinta) !important; }
@@ -44,9 +48,9 @@
   color: var(--f1-rojo);
 }
 .f1-nav-parte span { font-size: .85rem; color: var(--f1-tinta-suave); }
-/* El tallo es angosto (una línea que une los sectores); la copa se abre */
+/* Lo que encontramos: una línea que une los sectores (se lee en orden); explorá: un panel aparte */
 .f1-nav-grupo { position: relative; margin-left: 22px; padding-left: 12px; border-left: 3px solid var(--f1-borde); }
-.f1-nav-grupo.copa {
+.f1-nav-grupo.explorar {
   margin-left: 6px; padding: 6px;
   background: var(--f1-panel); border: 1px solid var(--f1-borde); border-radius: 8px;
 }
@@ -129,7 +133,7 @@
 h1 { font-style: italic; letter-spacing: -.01em; line-height: 1.1 !important; color: var(--f1-tinta); }
 [data-testid="stMainBlockContainer"] h3 { font-weight: 700; color: var(--f1-tinta); }
 
-/* Rótulos de las dos partes de la copa de martini */
+/* Rótulos de las dos partes de la página */
 .f1-parte {
   display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
   margin: .5rem 0 .2rem; scroll-margin-top: 80px;
@@ -166,7 +170,17 @@ h1 { font-style: italic; letter-spacing: -.01em; line-height: 1.1 !important; co
   background: var(--f1-panel);
   border: 1px solid var(--f1-borde); border-top: 4px solid var(--f1-rojo);
   border-radius: 8px; padding: 16px 20px 14px; box-shadow: var(--f1-sombra);
+  height: 100%; box-sizing: border-box;
 }
+/* Cartas en fila: todas del alto de la más alta (cada rótulo ocupa distintas líneas) */
+[data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) { align-items: stretch; }
+[data-testid="stColumn"]:has([data-testid="stMetric"]),
+[data-testid="stColumn"]:has([data-testid="stMetric"]) [data-testid="stVerticalBlock"],
+[data-testid="stColumn"]:has([data-testid="stMetric"]) [data-testid="stElementContainer"] {
+  height: 100%;
+}
+/* Rótulo de al menos dos líneas: los números quedan a la misma altura en las tres cartas */
+[data-testid="stMetricLabel"] { min-height: 2.9em; align-items: flex-start; }
 [data-testid="stMetricLabel"] p {
   font-size: .85rem !important; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
   color: var(--f1-tinta-suave);
@@ -177,7 +191,18 @@ h1 { font-style: italic; letter-spacing: -.01em; line-height: 1.1 !important; co
 }
 [data-testid="stMetricValue"] {
   font-weight: 700; font-style: italic; font-variant-numeric: tabular-nums; color: var(--f1-tinta);
+  font-size: clamp(1.5rem, 2.4vw, 2.25rem) !important;   /* se achica antes de cortarse */
 }
+[data-testid="stMetricValue"] > div {   /* el valor completo, sin «...»: si no entra, baja de línea */
+  white-space: normal !important; overflow: visible !important; text-overflow: clip !important;
+}
+/* Con delta (p. ej. «Puesto predicho con tus valores»): la flecha va a la derecha del número, no
+   abajo, así la tarjeta no crece y queda del alto de las demás. */
+[data-testid="stMetric"] > div:has([data-testid="stMetricDelta"]) {
+  display: flex; flex-wrap: wrap; align-items: center; column-gap: 14px;
+}
+[data-testid="stMetric"] > div:has([data-testid="stMetricDelta"]) > label { flex: 0 0 100%; }
+[data-testid="stMetricDelta"] { margin: 0 !important; font-size: 1.1rem; font-weight: 700; }
 
 /* ---------- Separadores: bandera a cuadros ---------- */
 [data-testid="stMainBlockContainer"] hr {
@@ -211,23 +236,48 @@ h1 { font-style: italic; letter-spacing: -.01em; line-height: 1.1 !important; co
   background: var(--f1-papel); box-sizing: border-box; box-shadow: var(--f1-sombra);
 }
 [data-testid="stVegaLiteChart"] { padding: 14px 20px 18px; }
-/* Controles dentro de los gráficos (temporada, pasos, casillas): con aire y alineados */
+/* Controles dentro de los gráficos (temporada, pasos, casillas): con aire y alineados, y
+   siempre ARRIBA del gráfico (Vega los pone abajo): primero se elige y después se mira, igual que
+   en «Carrera por carrera», y en los gráficos altos no quedan fuera de la pantalla. */
+[data-testid="stVegaLiteChart"] { display: flex !important; flex-direction: column; align-items: flex-start; }
+[data-testid="stVegaLiteChart"] > .vega-bindings { align-self: stretch; }
 [data-testid="stVegaLiteChart"] .vega-bindings {
+  order: -1;
   display: flex !important; flex-wrap: wrap; align-items: center; gap: 12px 30px;
-  margin-top: 14px !important; padding: 14px 20px !important; box-sizing: border-box;
+  margin: 0 0 14px !important; padding: 14px 20px !important; box-sizing: border-box;
   background: var(--f1-panel); border: 1px solid var(--f1-borde); border-radius: 8px;
   font-size: 1rem;
 }
 [data-testid="stVegaLiteChart"] .vega-bind {
   display: flex !important; margin: 0 !important; align-items: center; gap: 8px;
 }
-.vega-bind-name { min-width: 0 !important; margin-right: 4px; color: var(--f1-tinta-suave); font-weight: 600; }
+/* Los controles de los gráficos copian a los de Streamlit (tema de .streamlit/config.toml), así
+   un desplegable, una casilla o un rótulo se ven igual estén donde estén. Los mismos valores se
+   repiten en la página de «Carrera por carrera» (graficos/race_cars.py, `to_html`). */
+.vega-bind-name { min-width: 0 !important; margin-right: 4px; color: var(--f1-tinta); font-weight: 400; }
 .vega-bind select {
-  background: #FFFFFF; color: var(--f1-tinta); border: 1px solid var(--f1-borde);
-  border-radius: 6px; padding: 6px 10px; font: inherit;
+  appearance: none; -webkit-appearance: none; min-height: 40px; min-width: 110px;
+  padding: 6px 38px 6px 12px; font: inherit; color: var(--f1-tinta); cursor: pointer;
+  background: var(--f1-hueco-input) var(--f1-chevron) no-repeat right 12px center / 14px;
+  border: 1px solid var(--f1-borde); border-radius: .3rem;
 }
-.vega-bind-radio label { margin-right: 12px; }
-.vega-bind input[type="radio"], .vega-bind input[type="checkbox"] { accent-color: var(--f1-rojo); }
+.vega-bind select:hover { border-color: var(--f1-tinta-suave); }
+.vega-bind-radio label { margin-right: 14px; display: inline-flex; align-items: center; gap: 6px; }
+.vega-bind input[type="checkbox"], .vega-bind input[type="radio"] {
+  appearance: none; -webkit-appearance: none; margin: 0; flex: 0 0 auto; cursor: pointer;
+  width: 1.1rem; height: 1.1rem; background: var(--f1-casilla); border: 1px solid var(--f1-borde);
+  border-radius: 4px; display: inline-grid; place-content: center;
+}
+.vega-bind input[type="radio"] { border-radius: 50%; }
+.vega-bind input[type="checkbox"]:checked {
+  background: var(--f1-rojo) var(--f1-tilde) no-repeat center / 80%; border-color: var(--f1-rojo);
+}
+.vega-bind input[type="radio"]:checked {
+  background: var(--f1-rojo); border-color: var(--f1-rojo); box-shadow: inset 0 0 0 3px var(--f1-casilla);
+}
+.vega-bind input:focus-visible, .vega-bind select:focus-visible {
+  outline: 2px solid var(--f1-rojo); outline-offset: 2px;
+}
 
 /* ---------- Pie ---------- */
 .f1-pie {

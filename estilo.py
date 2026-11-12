@@ -62,24 +62,25 @@ def aplicar() -> None:
     st.html(f"<style>{(ASSETS / 'estilo.css').read_text(encoding='utf-8')}</style>")
 
 
-def menu(tallo: list[str], copa: list[str]) -> None:
-    """Menú lateral: el recorrido de la copa de martini, con enlaces a cada parte."""
+def menu(hallazgos: list[str], explorar: list[tuple[str, str, str]]) -> None:
+    """Menú lateral: el objetivo, lo que encontramos (secciones en orden) y las partes para
+    explorar por tu cuenta. Los nombres son para el usuario, no la estructura del relato."""
     pasos_tallo = "".join(
         f'<a class="f1-nav-item" href="#seccion-{i}"><img src="{_rueda(i, 64)}" alt="">'
         f'<span><small>Sector {i}</small>{html.escape(t)}</span></a>'
-        for i, t in enumerate(tallo, start=1))
-    pasos_copa = "".join(
-        f'<a class="f1-nav-item copa" href="#copa"><i>{"⌕" if i == 0 else "⚙"}</i>'
-        f'<span>{html.escape(t)}</span></a>' for i, t in enumerate(copa))
+        for i, t in enumerate(hallazgos, start=1))
+    pasos_explorar = "".join(   # (texto, ancla, ícono): cada uno lleva a su propia sección
+        f'<a class="f1-nav-item explorar" href="#{ancla}"><i>{icono}</i>'
+        f'<span>{html.escape(t)}</span></a>' for t, ancla, icono in explorar)
     st.sidebar.html(
         f'<div class="f1-nav">'
         f'<a class="f1-nav-logo" href="#portada"><img src="{_data_uri(ASSETS / "logo.svg")}" '
         f'alt="Fórmula 1"><b>Grupo 14</b></a>'
-        f'<a class="f1-nav-item portada" href="#portada"><i>🏁</i><span>La pregunta</span></a>'
-        f'<div class="f1-nav-parte"><b>El tallo</b><span>te lo contamos, paso a paso</span></div>'
+        f'<a class="f1-nav-item portada" href="#portada"><i>🏁</i><span>El objetivo</span></a>'
+        f'<div class="f1-nav-parte"><b>Lo que encontramos</b><span>en tres partes, en orden</span></div>'
         f'<div class="f1-nav-grupo">{pasos_tallo}</div>'
-        f'<div class="f1-nav-parte"><b>La copa</b><span>ahora manejás vos</span></div>'
-        f'<div class="f1-nav-grupo copa">{pasos_copa}</div>'
+        f'<div class="f1-nav-parte"><b>Explorá por tu cuenta</b><span>temporadas, carreras y el modelo</span></div>'
+        f'<div class="f1-nav-grupo explorar">{pasos_explorar}</div>'
         f'</div>')
 
 
@@ -104,7 +105,7 @@ def _color(team: str) -> str:
 
 
 def parte(id_: str, nombre: str, bajada: str) -> None:
-    """Rótulo que marca dónde empieza el tallo o la copa (y ancla del menú)."""
+    """Rótulo que marca dónde empieza cada parte de la página (y ancla del menú)."""
     st.html(f'<div id="{id_}" class="f1-parte"><b>{html.escape(nombre)}</b>'
             f'<span>{html.escape(bajada)}</span></div>')
 
