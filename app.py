@@ -19,7 +19,8 @@ from graficos import model_moves, panorama, pasos, race_cars, race_errors, seaso
 
 APP_DATA = Path(__file__).resolve().parent / "app_data"
 ANIO_TEST = 2026   # lo único que el modelo no vio al entrenar (2018-2025)
-PIPELINE = "https://github.com/Gonzalez-Matias/f1-pipeline"
+# El pipeline de la Entrega 1 vive en este mismo repositorio, en pipeline/.
+PIPELINE = "https://github.com/AntoAldao/ciencia_de_datos_grupo_14/tree/main/pipeline"
 
 # Nombre legible de cada columna que recibe el modelo (Probá el modelo).
 ETIQUETAS = {
@@ -88,7 +89,7 @@ ultima = ultima[ultima["RoundNumber"] == ultima["RoundNumber"].max()]
 equipos = (ultima.groupby("TeamId")["TeamPoints_Before"].max()
            .sort_values(ascending=False).index.tolist())
 estilo.encabezado(equipos, f"Ciencia de Datos · UTN FRM · 2026")
-estilo.menu(hallazgos=["La grilla manda", "Modelo vs. grilla", "Los abandonos"],
+estilo.menu(recorrido=["Los datos", "Lo que encontramos", "El modelo"],
             explorar=[("Todas las carreras", "todas-las-carreras", "⌕"),
                       ("Una temporada", "una-temporada", "▤"),
                       ("Probá el modelo", "proba-el-modelo", "⚙")])
@@ -109,19 +110,88 @@ st.caption(f"Test: las {test['carreras']} carreras de {ANIO_TEST}, que el modelo
            "entrenar. Error = cuántos puestos se equivoca en promedio con cada piloto.")
 
 st.divider()
-estilo.parte("hallazgos", "Lo que encontramos", "En tres partes, de la grilla a los abandonos")
+estilo.parte("recorrido", "El recorrido", "De los datos al modelo, en tres sectores")
 
 # ----------------------------------------------------------------------------------------------
 # TALLO: cada sección = título que afirma + gráfico + «Cómo lo sabemos» (cerrado por defecto).
 # ----------------------------------------------------------------------------------------------
-# Orden del relato: contexto (la grilla) → resultado (el modelo le gana) → límite (los abandonos).
+# El orden de la consigna: Los datos (Entrega 1) → Lo que encontramos (Entrega 2) → El modelo
+# (Entrega 3). Los abandonos no abren el relato: son el límite del modelo, al final.
 n_filas, n_carreras = len(df), df["Carrera"].nunique()
 pct_dnf = (df["Terminó"] == False).mean()  # noqa: E712
 auc_abandonos = next(t for t in notebook if t.startswith("Anticipar abandonos")
                      ).split("AUC medio ")[1].rstrip(")")
+filas_crudas = resumen["datos"]["pasos"][0]["filas"]   # «Crudo del pipeline», antes de limpiar
+filas_crudas_txt = f"{filas_crudas:,}".replace(",", ".")
+corte_anio, corte_fecha = resumen["datos"]["al_dia"].split(", ")   # "2026", "fecha 17"
+archivo_datos = resumen["datos"]["archivo"].replace("\\", "/")     # resumen.json puede venir de Windows
+hay_practica = df[tallo.FILAS_DATOS[model_moves.FP_PACE]].notna().any(axis=1)
+gp_sin_practica = int((~hay_practica.groupby(df["Carrera"]).any()).sum())
 
-# ---- Sector 1: el contexto y la vara a superar ------------------------------------------------
-estilo.seccion(1, "Quien larga adelante termina adelante: la grilla sola ya ordena buena parte de "
+# ---- Sector 1 · Los datos (Entrega 1) ------------------------------------------------------------
+estilo.seccion(1, f"Antes de largar, la grilla está siempre; las prácticas faltan en "
+          f"{gp_sin_practica} de los {n_carreras} Grandes Premios")
+st.altair_chart(tallo.datos_disponibles(df), theme=None)
+st.write(f"Cada fila es un piloto en un Gran Premio: {n_filas:,} filas de 2018 a 2026.".replace(",", ".")
+         + " Cada casilla es el % de pilotos con ese dato en esa temporada; más lleno, más "
+         "completo. Mirá las filas: la largada y la clasificación están casi siempre, el "
+         "campeonato falta solo en la primera fecha (todavía no hay puntos), y las prácticas "
+         f"tienen huecos en 2018-2019 y 2023-2024 ({hay_practica.mean():.0%} en total). Lo que "
+         "siempre está, la grilla, va a ser lo que más pesa.")
+with st.expander("Cómo lo sabemos"):
+    st.markdown(
+        "**De dónde salen.** Del dataset que produce nuestro pipeline "
+        f"de Airflow de la Entrega 1 ([carpeta pipeline]({PIPELINE})) a partir "
+        "de las estadísticas estilo Ergast (resultados, clasificación y "
+        "campeonato) y la telemetría de FastF1 (prácticas libres): "
+        f"{filas_crudas_txt} filas, una por piloto en cada Gran Premio, "
+        f"de {int(df['Year'].min())} a {int(df['Year'].max())}, con corte en la "
+        f"{corte_fecha} de {corte_anio}. El respaldo es el archivo "
+        f"{archivo_datos}, guardado en el repositorio; "
+        "build_app.py lo lee de ahí."
+    )
+
+    st.markdown(
+        "**Qué es una fila.** Un piloto en un Gran Premio. Lo que "
+        "queremos predecir es su puesto final en esa carrera."
+    )
+
+    st.markdown(
+        "**Qué filtramos.** Revisamos los datos paso a paso y "
+        "anotamos cuántas filas quedaron después de cada uno:"
+    )
+    st.dataframe(tabla_nb("Limpieza aplicada"))
+
+    st.markdown(
+        "**Qué dejamos afuera.** Todo lo que se conoce recién "
+        "después de la carrera (si terminó, en qué estado, cuántas "
+        "vueltas perdió, las sanciones) nunca entra al modelo: si "
+        "terminó o no lo usamos solo para medir. El campeonato se "
+        "toma como estaba antes de cada fecha."
+    )
+
+    st.caption(
+        "Columnas descartadas por fuga: RACE_Finished, RACE_Status, "
+        "RACE_Laps_Down, RACE_Lapped, RACE_DNF_Type y las sanciones."
+    )
+
+    st.markdown(
+        "**Cómo se arma el gráfico.** Para cada temporada contamos "
+        "qué parte de los pilotos tiene cada dato. Un grupo cuenta "
+        "como presente si el piloto tiene al menos uno de sus datos, "
+        "por ejemplo la vuelta más rápida con alguna de las tres "
+        "gomas. Los grupos y sus colores son los mismos que en "
+        "«Por qué el modelo mueve a cada piloto»."
+    )
+
+    st.caption(
+        f"Limitación: en {gp_sin_practica} Grandes Premios no hay "
+        "ningún dato de prácticas. El modelo completa los faltantes "
+        "con la mediana del entrenamiento y marca que faltaban."
+    )
+
+# ---- Sector 2 · Lo que encontramos (Entrega 2) ---------------------------------------------------
+estilo.seccion(2, "Quien larga adelante termina adelante: la grilla sola ya ordena buena parte de "
           "la carrera")
 col_g, col_t = st.columns([3, 2])
 with col_g:
@@ -134,14 +204,6 @@ with col_t:
              "grandes son la excepción. Por eso la grilla es la referencia que el modelo tiene "
              "que superar.")
 with st.expander("Cómo lo sabemos"):
-    st.markdown(
-        f"- **De dónde salen:** el pipeline de la Entrega 1 (Airflow, [{PIPELINE}]({PIPELINE})) "
-        "junta clasificación, prácticas libres, campeonato y resultado de cada GP en "
-        f"`{resumen['datos']['archivo']}`. Datos al día: {resumen['datos']['al_dia']}.\n"
-        f"- **Qué es una fila:** un piloto en un Gran Premio ({n_filas:,} filas); el objetivo es "
-        "su posición final.\n".replace(",", ".") +
-        "- **Qué se filtró, paso por paso** (la limpieza del notebook de la Entrega 3):")
-    st.dataframe(tabla_nb("Limpieza aplicada"))
     st.markdown(
         "- **Una hipótesis que se sostuvo (H1, «la grilla manda»):** la largada y la posición "
         f"final se mueven juntas con fuerza: Spearman "
@@ -156,17 +218,17 @@ with st.expander("Cómo lo sabemos"):
         "(fila) y de llegada (columna); cada casilla es el % de los que largaron en esa franja. "
         "Los que largan desde boxes (sin posición de grilla) cuentan en «16 o más».")
 
-# ---- Sector 2: el resultado ---------------------------------------------------------------
-estilo.seccion(2, f"El modelo le gana a la grilla en los pilotos que terminan la carrera: erra "
-          f"{fmt(test['mae_modelo_sin_abandonos'])} puestos contra "
-          f"{fmt(test['mae_grilla_sin_abandonos'])}")
+# ---- Sector 3 · El modelo (Entrega 3) ------------------------------------------------------------
+estilo.seccion(3, f"El modelo le gana a la grilla en los que terminan "
+          f"({fmt(test['mae_modelo_sin_abandonos'])} contra "
+          f"{fmt(test['mae_grilla_sin_abandonos'])} puestos), pero con los abandonos quedan casi "
+          f"empatados ({fmt(test['mae_modelo'])} contra {fmt(test['mae_grilla'])})")
 st.altair_chart(pasos.grafico_pasos(df, test, anio_test=ANIO_TEST), theme=None)
 st.write("Recorré los pasos con los botones de arriba del gráfico. Cada barra cuenta cuántos pilotos "
          "quedaron a esa distancia de su puesto real: en el 0, la predicción acertó. El modelo le "
-         "suma a la grilla la clasificación, el campeonato y las prácticas, y junta más pilotos "
-         "cerca del 0. El gráfico arranca en el paso 3: en gris queda una cola a la izquierda, "
-         "igual para el modelo y para la grilla. Son los que no terminaron, y es lo que falta "
-         "contar.")
+         "suma a la grilla la clasificación, el campeonato y las prácticas: no acierta más puestos "
+         "exactos, pero tiene menos errores grandes. El gráfico arranca en el paso 3: en gris, "
+         "los que no terminaron, la cola de la izquierda para los dos.")
 with st.expander("Cómo lo sabemos"):
     st.markdown(
         "**Qué medimos.** El error absoluto medio (MAE) indica cuántos "
@@ -242,17 +304,17 @@ with st.expander("Cómo lo sabemos"):
         "ni demuestran una relación causal."
     )
 
-# ---- Sector 3: el límite ------------------------------------------------------------------
-estilo.seccion(3, f"Pero uno de cada {round(1 / pct_dnf)} pilotos no termina, nadie lo ve venir, "
-          f"y con ellos el modelo y la grilla quedan casi empatados ({fmt(test['mae_modelo'])} "
-          f"contra {fmt(test['mae_grilla'])})")
+# Segundo gráfico del sector, a la vista: los abandonos no son una rareza del test.
 st.altair_chart(tallo.abandonos_por_temporada(df), theme=None)
-st.write(f"El {pct_dnf:.0%} de no terminados se repite todas las temporadas: es un evento "
-         f"frecuente, no una rareza. En el test son el {pct_filas_abandonos:.0f}% de los pilotos "
-         f"y explican el {pct_error_abandonos:.0f}% del error: el modelo y la grilla los ubican "
-         "según cómo venían, y terminan al fondo de la tabla. Con lo que se sabe antes de la "
-         f"carrera no se pueden anticipar (AUC {auc_abandonos}; 0,5 es adivinar), así que esta "
-         "parte del error no la baja ningún modelo con estos datos.")
+anio_mas_abandonos = (df["Terminó"] == False).groupby(df["Year"]).mean().idxmax()  # noqa: E712
+st.write(f"Los abandonos no son una rareza: pasan todas las temporadas, en promedio uno de cada "
+         f"{round(1 / pct_dnf)} pilotos. "
+         + (f"{ANIO_TEST}, el test, es el año con más: son el" if anio_mas_abandonos == ANIO_TEST
+            else f"En el test ({ANIO_TEST}) son el")
+         + f" {pct_filas_abandonos:.0f}% de los pilotos y explican "
+         f"el {pct_error_abandonos:.0f}% del error, y con lo que se sabe antes de la carrera no se "
+         f"pueden anticipar (AUC {auc_abandonos}; 0,5 es adivinar): esa parte del error no la baja "
+         "ningún modelo con estos datos.")
 with st.expander("Cómo lo sabemos"):
     st.markdown(
         "**Cuánto pesan en el error.** Separamos a quienes terminaron "
@@ -276,6 +338,7 @@ with st.expander("Cómo lo sabemos"):
         "el clasificador probado mostró poca capacidad para anticipar "
         "los abandonos. Son una limitación de nuestro enfoque."
     )
+
 st.divider()
 
 # ----------------------------------------------------------------------------------------------

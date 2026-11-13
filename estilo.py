@@ -62,13 +62,13 @@ def aplicar() -> None:
     st.html(f"<style>{(ASSETS / 'estilo.css').read_text(encoding='utf-8')}</style>")
 
 
-def menu(hallazgos: list[str], explorar: list[tuple[str, str, str]]) -> None:
-    """Menú lateral: el objetivo, lo que encontramos (secciones en orden) y las partes para
+def menu(recorrido: list[str], explorar: list[tuple[str, str, str]]) -> None:
+    """Menú lateral: el objetivo, el recorrido (los tres sectores, en orden) y las partes para
     explorar por tu cuenta. Los nombres son para el usuario, no la estructura del relato."""
     pasos_tallo = "".join(
         f'<a class="f1-nav-item" href="#seccion-{i}"><img src="{_rueda(i, 64)}" alt="">'
         f'<span><small>Sector {i}</small>{html.escape(t)}</span></a>'
-        for i, t in enumerate(hallazgos, start=1))
+        for i, t in enumerate(recorrido, start=1))
     pasos_explorar = "".join(   # (texto, ancla, ícono): cada uno lleva a su propia sección
         f'<a class="f1-nav-item explorar" href="#{ancla}"><i>{icono}</i>'
         f'<span>{html.escape(t)}</span></a>' for t, ancla, icono in explorar)
@@ -77,7 +77,7 @@ def menu(hallazgos: list[str], explorar: list[tuple[str, str, str]]) -> None:
         f'<a class="f1-nav-logo" href="#portada"><img src="{_data_uri(ASSETS / "logo.svg")}" '
         f'alt="Fórmula 1"><b>Grupo 14</b></a>'
         f'<a class="f1-nav-item portada" href="#portada"><i>🏁</i><span>El objetivo</span></a>'
-        f'<div class="f1-nav-parte"><b>Lo que encontramos</b><span>en tres partes, en orden</span></div>'
+        f'<div class="f1-nav-parte"><b>El recorrido</b><span>de los datos al modelo</span></div>'
         f'<div class="f1-nav-grupo">{pasos_tallo}</div>'
         f'<div class="f1-nav-parte"><b>Explorá por tu cuenta</b><span>temporadas, carreras y el modelo</span></div>'
         f'<div class="f1-nav-grupo explorar">{pasos_explorar}</div>'
