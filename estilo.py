@@ -58,8 +58,11 @@ def _circuito(numero: int) -> str:
 
 
 def aplicar() -> None:
-    """Carga el CSS de la app."""
-    st.html(f"<style>{(ASSETS / 'estilo.css').read_text(encoding='utf-8')}</style>")
+    """Carga el CSS de la app (estilo.css y, encima, la vuelta al circuito de vuelta.css) y el
+    zócalo fijo. Llamar una vez, arriba de todo."""
+    css = "".join((ASSETS / f).read_text(encoding="utf-8") for f in ("estilo.css", "vuelta.css"))
+    st.html(f"<style>{css}</style>")
+    zocalo()
 
 
 def menu(recorrido: list[str], explorar: list[tuple[str, str, str]]) -> None:
@@ -121,3 +124,72 @@ def seccion(numero: int, titulo: str) -> None:
 def pie(texto_izq: str, texto_der: str) -> None:
     st.html(f'<div class="f1-pie"><span>{html.escape(texto_izq)}</span>'
             f'<span>{html.escape(texto_der)}</span></div>')
+
+
+# ------------------------------------------------------------------------------------------------
+# La página como una vuelta al circuito (PR #5, «Identidad de F1 y recorrido»), en el tema claro.
+# El CSS está en assets/vuelta.css. Sin logos ni marcas: solo colores, tipografía y formas.
+# ------------------------------------------------------------------------------------------------
+
+# Un circuito genérico (inventado), la misma forma que recorre el auto.
+_PISTA = ("M60 200 L150 200 C190 200 200 170 230 150 L300 100 C330 80 370 90 380 120 L390 160 "
+          "C395 185 370 200 345 200 L330 200 C300 200 300 235 330 245 L360 255 C380 262 375 290 350 290 "
+          "L90 290 C50 290 30 260 40 230 C45 210 50 200 60 200 Z")
+
+SECCIONES = [("largada", "Largada"), ("sector-1", "S1 · Datos"), ("sector-2", "S2 · Hallazgo"),
+             ("sector-3", "S3 · Modelo"), ("boxes", "Boxes"), ("bandera", "🏁")]
+
+
+def _html(codigo: str) -> None:
+    st.markdown(codigo, unsafe_allow_html=True)
+
+
+def zocalo() -> None:
+    """El zócalo fijo abajo, como el de la transmisión: cada nombre lleva a su parte de la vuelta
+    y una línea se llena a medida que se baja."""
+    enlaces = "".join(f'<a href="#{ancla}" target="_self">{nombre}</a>' for ancla, nombre in SECCIONES)
+    _html(f'<div class="f1-zocalo"><div class="f1-progreso"></div><div class="vuelta">VUELTA 1/1</div>'
+          f'<nav>{enlaces}</nav></div>')
+
+
+def largada(pregunta: str, idea: str) -> None:
+    """Portada: el semáforo se enciende luz por luz, se apaga, y aparecen la pregunta y el circuito."""
+    columnas = "".join('<div class="f1-columna"><div class="f1-luz"></div><div class="f1-luz roja"></div></div>'
+                       for _ in range(5))
+    circuito = (f'<svg class="f1-circuito" viewBox="20 70 390 240" aria-hidden="true">'
+                f'<path class="f1-pista" d="{_PISTA}"/><path class="f1-trazo" d="{_PISTA}"/>'
+                f'<rect x="56" y="188" width="6" height="24" fill="#FFFFFF"/>'
+                f'<circle class="f1-auto" r="7" fill="{C.F1_ROJO}" stroke="#fff" stroke-width="2" opacity="0">'
+                f'<set attributeName="opacity" to="1" begin="5.6s"/>'
+                f'<animateMotion dur="7s" begin="5.6s" repeatCount="indefinite" path="{_PISTA}"/></circle></svg>')
+    _html(f'<div id="largada" class="f1-largada">{circuito}<div class="f1-semaforo">{columnas}</div>'
+          f'<div class="f1-fuera">LUCES FUERA · ARRANCA LA VUELTA</div>'
+          f'<h1>{html.escape(pregunta)}</h1><p class="f1-sub">{html.escape(idea)}</p></div>')
+
+
+def sector(numero: int, nombre: str) -> None:
+    """Cartel de sector, con los tres minisectores encendidos hasta el actual."""
+    colores = ["#FFD12E", "#3DDC84", "#B65CFF"]   # como los minisectores de la transmisión
+    mini = "".join(f'<i class="{"on" if i < numero else ""}" style="--c:{c}"></i>' for i, c in enumerate(colores))
+    _html(f'<div id="sector-{numero}" class="f1-sector"><span class="num">S{numero}</span>'
+          f'<span class="nombre">{html.escape(nombre)}</span><span class="mini">{mini}</span></div>')
+
+
+def piano() -> None:
+    """Separador entre secciones: el piano rojo y blanco del borde de la pista."""
+    _html('<div class="f1-kerb"></div>')
+
+
+def pit_lane(titulo: str, texto: str) -> None:
+    """Entrada a la copa: de acá en adelante maneja el usuario."""
+    _html(f'<div id="boxes" class="f1-pit"><span class="limite">80</span><span class="cartel">PIT</span>'
+          f'<span class="estado">BOXES ABIERTOS</span>'
+          f'<h2>{html.escape(titulo)}</h2><p>{html.escape(texto)}</p><div class="linea"></div></div>')
+
+
+def bandera(titulo: str, texto: str, pie: str = "") -> None:
+    """Cierre: bandera a cuadros, la conclusión y volver a largar."""
+    pie_html = f'<br><span class="pie">{html.escape(pie)}</span>' if pie else ""
+    _html(f'<div id="bandera" class="f1-bandera"><div class="cuadros"></div><div class="texto">'
+          f'<b>{html.escape(titulo)}</b>{html.escape(texto)}{pie_html}<br><br>'
+          f'<a href="#largada" target="_self">↺ Volver a largar</a></div></div>')
