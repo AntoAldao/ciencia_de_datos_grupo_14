@@ -1,6 +1,6 @@
 """Visualización "autitos": largada → predicción del modelo → resultado real (Altair).
 
-Vista superior de una pista oscura con un carril por posición (P1 arriba):
+Vista superior de una pista con un carril por posición (P1 arriba):
 
 - izquierda: orden de largada (grilla),
 - centro: los autos avanzan; la distancia horizontal de cada uno al líder pasa suavemente de la
@@ -32,6 +32,7 @@ import numpy as np
 import pandas as pd
 
 from graficos import colores as C
+from graficos import logos
 
 RACE_COLS = ["Year", "RoundNumber"]
 
@@ -47,8 +48,8 @@ DRIVER_CODES = {
 }
 
 # Paleta de la "pista" (tema oscuro fijo: es una escena, no un gráfico de fondo claro).
-ASPHALT, LANE, INK, INK_MUTED = C.ASPHALT, C.LANE, C.INK, C.INK_MUTED
-DOUBT = "#FFD54A"
+ASPHALT, LANE, INK, INK_MUTED = C.FONDO, C.LINEA, C.INK, C.INK_MUTED   # nombres de la escena (pista)
+DOUBT = "#F2B705"   # franja de duda (amarillo; con opacidad baja sobre el papel)
 
 # Coordenadas horizontales del gráfico (la pista va de 0 a 1; textos afuera) y siluetas en
 # [-1, 1] mirando a la derecha.
@@ -57,7 +58,7 @@ X_END = 0.76       # líder al llegar
 FIELD_SPAN = 0.5   # ancho que ocupa el pelotón al llegar (del líder al más lejano)
 GRID_STEP = 0.3    # separación en la formación de largada, en puestos (compacta)
 LANE_CHANGE = 0.04  # duración de un cambio de carril, como fracción del avance
-X_DG, X_DM, X_PCT = 1.32, 1.46, 1.60   # columnas Δ grilla, Δ modelo y mejora (borde derecho)
+X_DG, X_DM, X_PCT = 1.41, 1.54, 1.67   # columnas Δ grilla, Δ modelo y mejora (borde derecho)
 RACE_LAPS = 58     # vueltas supuestas por carrera (el dataset no trae el total)
 CRASH_MAX = 0.9    # el choque más tardío (ej. descalificados con 0 vueltas de desventaja)
 NO_CRASH = 2.0     # `crash_s` de quien no choca (fuera de 0..1)
@@ -166,6 +167,8 @@ def race_table(df: pd.DataFrame, stretch: bool = False,
     visualizar): los que no terminaron (`RACE_Finished == 0`) chocan en el avance
     `crash_s = 1 − RACE_Laps_Down / race_laps` (máx. `CRASH_MAX`), salen del orden y quedan al
     fondo (el que abandonó antes, más abajo); los que terminaron se ordenan por puntaje.
+    `mae_adj`/`mae_grid_adj` = MAE **sin abandonos**: solo los que terminaron (como `medir` en
+    build_app.py), así el promedio de la temporada coincide con los números de los títulos.
     """
     df = df.copy()
     keys = [df[c] for c in RACE_COLS]
@@ -213,9 +216,21 @@ def race_table(df: pd.DataFrame, stretch: bool = False,
     df["gap_adj"] = df[fin].groupby(RACE_COLS)["score"].diff()
 
     # 6. Error por carrera del modelo y de "la grilla como predicción", para comparar.
-    for col, pred in [("mae_model", "pred_pos"), ("mae_grid", "grid"),
-                      ("mae_adj", "pred_adj"), ("mae_grid_adj", "grid_adj")]:
-        df[col] = (df[pred] - df["final"]).abs().groupby(keys).transform("mean")
+    # Para medir, la grilla empatada (varios que largan desde boxes figuran con la misma
+    # posición) va con el puesto promedio, como en `medir`; `grid` (entero, desempatado por orden
+    # de fila) queda solo para dibujar.
+    grid_raw = df["Q_GridPosition"].fillna(21)
+    grid_avg = grid_raw.groupby(keys).rank(method="average")
+    grid_avg_fin = grid_raw[fin].groupby([df.loc[fin, c] for c in RACE_COLS]).rank(method="average")
+    for col, pred in [("mae_model", df["pred_pos"]), ("mae_grid", grid_avg)]:
+        df[col] = (pred - df["final"]).abs().groupby(keys).transform("mean")
+    # Sin abandonos: la misma cuenta que `medir` en build_app.py (y el notebook), para que cuadre
+    # con los títulos. Solo los que terminaron, con el resultado real reordenado 1..n entre ellos.
+    # No se usa `pred_adj`/`grid_adj` sobre todos: los abandonados quedan al fondo en su orden
+    # real de abandono, así que su error es ~0 y achica el promedio sin que el modelo acierte nada.
+    final_fin = df[fin].groupby(RACE_COLS)["final"].rank(method="average")
+    for col, pred in [("mae_adj", df["pred_adj"]), ("mae_grid_adj", grid_avg_fin)]:
+        df[col] = (pred - final_fin).abs().groupby(keys).transform("mean")
 
     # 7. Color: paleta por temporada; en cada carrera el primer piloto del equipo (orden
     #    alfabético) va en el tono claro y el segundo en el oscuro.
@@ -356,7 +371,7 @@ def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, thresho
     versión a dibujar (original o `adjusted_view`). Devuelve el panel y su dataset con nombre."""
     n_max = int(t.groupby("race").size().max())
     height = row_height * n_max
-    x_dom = (-0.16, 1.62)
+    x_dom = (-0.30, 1.69)
     y_scale = alt.Scale(domain=[0.4, n_max + 0.6], reverse=True, nice=False, zero=False)
     x_scale = alt.Scale(domain=list(x_dom), nice=False, zero=False)
     no_axis = dict(axis=None)
@@ -371,8 +386,8 @@ def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, thresho
     arrive = f"clamp(({tt} - 0.95) / 0.05, 0, 1)"   # solo en el último 5% del avance
 
     xy = dict(x=alt.X("x:Q", scale=x_scale, **no_axis), y=alt.Y("y:Q", scale=y_scale, **no_axis))
-    base = alt.Chart(t[["race", "race_label", "driver", "color", "grid", "pred_pos", "final",
-                        "dnf", "mae_model", "mae_grid", "grid_ref"]]).transform_filter(in_race)
+    base = alt.Chart(t[["race", "race_label", "driver", "team", "color", "grid", "pred_pos",
+                        "final", "dnf", "mae_model", "mae_grid", "grid_ref"]]).transform_filter(in_race)
 
     # Carriles de la pista (uno por posición).
     lanes = alt.Chart(pd.DataFrame({"y": np.arange(1, n_max + 1)})).mark_rule(
@@ -387,7 +402,7 @@ def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, thresho
                            for r in range(2 * n_max + 1) for c in range(2)])
     finish = alt.Chart(checks).mark_square(size=row_height * 4, opacity=0.85).encode(
         x=alt.X("x:Q", scale=x_scale, **no_axis), y=alt.Y("y:Q", scale=y_scale, **no_axis),
-        color=alt.Color("black:N", scale=alt.Scale(domain=[0, 1], range=[INK, "#111111"]),
+        color=alt.Color("black:N", scale=alt.Scale(domain=[0, 1], range=["#FFFFFF", C.CARBONO]),
                         legend=None))
     x_lines = X_END + half_car + 0.115                       # después de la meta
 
@@ -398,15 +413,24 @@ def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, thresho
         label="datum.k % 5 == 0 ? (datum.k == 0 ? 'líder' : '−' + datum.k) : ''"
     ).transform_filter(f"datum.x >= {X_LEFT}")   # solo sobre la pista
     ruler_ticks = ruler.mark_rule(color=INK_MUTED, strokeWidth=1).encode(y2="y2:Q", **xy)
-    ruler_txt = ruler.mark_text(color=INK_MUTED, fontSize=9, dy=-7).encode(text="label:N", **xy)
+    ruler_txt = ruler.mark_text(color=INK_MUTED, fontSize=11, dy=-7).encode(text="label:N", **xy)
 
     # Columnas de texto: largada (izquierda) y resultado real (derecha).
     grid_txt = base.transform_calculate(x="-0.02", y="datum.grid", label=(
         "'P' + datum.grid + '  ' + datum.driver")).mark_text(
-        align="right", color=INK, fontSize=12, font="monospace").encode(text="label:N", **xy)
+        align="right", color=INK, fontSize=14, font="monospace").encode(text="label:N", **xy)
     final_txt = base.transform_calculate(x="1.03", y="datum.final", label=(
         "'P' + datum.final + '  ' + datum.driver + (datum.dnf ? '  ✕' : '')")).mark_text(
-        align="left", color=INK, fontSize=12, font="monospace").encode(text="label:N", **xy)
+        align="left", color=INK, fontSize=14, font="monospace").encode(text="label:N", **xy)
+    # Logo de la escudería al lado de la largada y del resultado real.
+    con_logo = base.transform_lookup(
+        lookup="team", from_=alt.LookupData(logos.tabla(t["team"]), "team", ["logo"])
+    ).transform_filter("datum.logo != ''")
+    logo_px = dict(width=row_height * 1.25, height=row_height * 0.7)
+    grid_logo = con_logo.transform_calculate(x="-0.245", y="datum.grid").mark_image(
+        **logo_px).encode(url="logo:N", **xy)
+    final_logo = con_logo.transform_calculate(x="1.29", y="datum.final").mark_image(
+        **logo_px).encode(url="logo:N", **xy)
     final_chip = base.transform_calculate(x="1.01", y="datum.final").mark_square(
         size=60).encode(color=alt.Color("color:N", scale=None), **xy)
 
@@ -428,16 +452,16 @@ def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, thresho
     fade = alt.Opacity("op:Q", scale=None)
     diff_cols = [
         diffs.transform_calculate(x=f"{X_DG}").mark_text(
-            align="right", color=INK, fontSize=11, font="monospace").encode(
+            align="right", color=INK, fontSize=13, font="monospace").encode(
             text="dg_txt:N", opacity=fade, **xy),
         diffs.transform_calculate(x=f"{X_DM}").mark_text(
-            align="right", color=INK, fontSize=11, font="monospace").encode(
+            align="right", color=INK, fontSize=13, font="monospace").encode(
             text="dm_txt:N", opacity=fade, **xy),
         *[diffs.transform_filter(f"datum.tone == '{name}'").transform_calculate(
-            x=f"{X_PCT}").mark_text(align="right", color=color, fontSize=11,
+            x=f"{X_PCT}").mark_text(align="right", color=color, fontSize=13,
                                      font="monospace").encode(
             text="pct_txt:N", opacity=fade, **xy)
-          for name, color in [("mejor", GOOD), ("peor", BAD), ("neutro", INK_MUTED)]],
+          for name, color in [("mejor", C.MEJOR_TEXTO), ("peor", BAD), ("neutro", INK_MUTED)]],
     ]
 
     # Recorridos: puntos ya pasados + el punto actual (interpolado entre el anterior y el
@@ -499,13 +523,13 @@ def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, thresho
     wheels = cars_data.mark_point(shape=CAR_WHEELS, size=car_px ** 2, filled=True,
                                   fill="#0D0D0D", stroke=None, opacity=1).encode(**xy)
     cars = cars_data.mark_point(shape=CAR_BODY, size=car_px ** 2, filled=True,
-                                opacity=1, stroke=ASPHALT, strokeWidth=0.6).encode(
+                                opacity=1, stroke=INK, strokeWidth=0.8).encode(
         fill=alt.Fill("fill:N", scale=None), tooltip=tooltip, **xy)
-    car_txt = cars_data.mark_text(align="left", dx=car_px / 2 + 4, color=INK, fontSize=11,
+    car_txt = cars_data.mark_text(align="left", dx=car_px / 2 + 4, color=INK, fontSize=13,
                                   fontWeight="bold").encode(text="name:N", **xy)
     # Intervalo con el de adelante, detrás de cada auto (aparece al llegar).
     gap_txt = cars_data.mark_text(align="right", dx=-car_px / 2 - 4, color=INK,
-                                  fontSize=10).encode(
+                                  fontSize=12).encode(
         text="gap_lbl:N", opacity=alt.Opacity("op:Q", scale=None), **xy)
 
     # Al llegar: línea punteada del carril predicho al resultado real (largo = error).
@@ -533,11 +557,11 @@ def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, thresho
                                    "Δ GRILLA", "Δ MODELO", "MEJORA"],
                          "align": ["right", "center", "left", "right", "right", "right"]})
     headers = alt.layer(*[
-        alt.Chart(head.iloc[[i]]).mark_text(align=a, color=INK_MUTED, fontSize=10,
+        alt.Chart(head.iloc[[i]]).mark_text(align=a, color=INK_MUTED, fontSize=12,
                                             fontWeight="bold", dy=-row_height * 1.0).encode(
             x=alt.X("x:Q", scale=x_scale, **no_axis), y=alt.value(0), text="label:N")
         for i, a in enumerate(head["align"])])
-    mae_lbl = ("'MAE ajustado ' + format(datum.mae_model, '.2f') + '  vs  grilla ajustada '"
+    mae_lbl = ("'MAE sin abandonos ' + format(datum.mae_model, '.2f') + '  vs  grilla '"
                if adjusted else "'MAE modelo ' + format(datum.mae_model, '.2f') + '  vs  grilla '")
     mae_lbl += (" + format(datum.mae_grid, '.2f') + '  (' + (datum.mae_model <= datum.mae_grid ? "
                 "'mejora ' : 'empeora ') + format(abs(datum.mae_grid - datum.mae_model) / "
@@ -548,21 +572,21 @@ def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, thresho
     ).transform_calculate(
         label=(f"datum.race_label + '   ·   avance ' + format({tt}, '.0%') + "
                f"(avance >= 0.999 ? '   ·   ' + {mae_lbl} : '')")
-    ).mark_text(align="left", color=INK, fontSize=13, dy=-row_height * 1.8).encode(
+    ).mark_text(align="left", color=INK, fontSize=15, dy=-row_height * 1.8).encode(
         x=alt.value(0), y=alt.value(0), text="label:N")
 
     panel = alt.layer(
         lanes, start, finish, ruler_ticks, ruler_txt, doubt, error_line, trail, grid_txt,
-        final_chip, final_txt, *diff_cols, wheels, cars, car_txt, gap_txt, headers, summary,
+        grid_logo, final_chip, final_txt, final_logo, *diff_cols, wheels, cars, car_txt, gap_txt, headers, summary,
     ).properties(width=width, height=height, title=alt.Title(
-        title, anchor="start", color=INK, fontSize=14, offset=row_height * 1.8))
+        title, anchor="start", color=INK, fontSize=16, offset=row_height * 1.8))
     return panel, {dataset: paths[["key", "s", "y"]].to_dict("records")}
 
 
 def _configure(chart: Any) -> Any:
     return chart.configure(
         background=ASPHALT, padding={"left": 20, "right": 20, "top": 16, "bottom": 16}
-    ).configure_view(stroke=None, fill=ASPHALT).configure_text(font="sans-serif")
+    ).configure_view(stroke=None, fill=ASPHALT).configure_text(font=C.FUENTE)
 
 
 def _max_behind(table: pd.DataFrame, adjusted: bool) -> float:
@@ -597,11 +621,12 @@ def race_cars_chart(table: pd.DataFrame, threshold: float = 0.2, width: int = 10
 
 
 def race_cars_compare(table: pd.DataFrame, threshold: float = 0.2, width: int = 800,
-                      row_height: int = 30, model_name: str = "modelo",
+                      row_height: int = 34, model_name: str = "modelo",
                       grid_step: float = GRID_STEP,
-                      change: float = LANE_CHANGE) -> alt.HConcatChart:
-    """Las dos versiones lado a lado con el mismo slider y selector: a la izquierda la
-    predicción del modelo; a la derecha, ajustada por abandonos (los que no terminaron chocan en
+                      change: float = LANE_CHANGE) -> alt.VConcatChart:
+    """Las dos versiones, una arriba de la otra (así cada una usa todo el ancho y se lee bien),
+    con el mismo slider y selector: arriba la
+    predicción del modelo; abajo, ajustada por abandonos (los que no terminaron chocan en
     su vuelta de abandono, quedan grises y los de abajo suben). Misma escala en ambas."""
     avance, carrera = _params(table)
     max_behind = _max_behind(table, adjusted=True)
@@ -612,7 +637,7 @@ def race_cars_compare(table: pd.DataFrame, threshold: float = 0.2, width: int = 
                       **common)
     right, d2 = _panel(adjusted_view(table), adjusted=True, dataset="lane_paths_adj",
                        title=_TITLES[True], **common)
-    chart = alt.hconcat(left, right, spacing=60).add_params(avance, carrera).properties(
+    chart = alt.vconcat(left, right, spacing=70).add_params(avance, carrera).properties(
         datasets={**d1, **d2},
         title=alt.Title(
             "Largada → predicción → resultado real",
@@ -620,9 +645,9 @@ def race_cars_compare(table: pd.DataFrame, threshold: float = 0.2, width: int = 
                       "horizontal al líder = puestos de puntaje del modelo. Autos pegados = duda "
                       f"del orden (franja amarilla: menos de {threshold:g} puestos).",
                       "Línea punteada = error frente al resultado real. ✕ = no terminó. "
-                      "Derecha: los que no terminaron chocan en su vuelta de abandono "
+                      "Abajo: los que no terminaron chocan en su vuelta de abandono "
                       f"(aprox., carreras de {RACE_LAPS} vueltas) y los de abajo suben."],
-            anchor="start", color=INK, subtitleColor=INK_MUTED, fontSize=16, offset=16))
+            anchor="start", color=INK, subtitleColor=INK_MUTED, fontSize=18, offset=16))
     return _configure(chart)
 
 
@@ -636,13 +661,30 @@ _HTML = """<!doctype html>
 <script src="https://cdn.jsdelivr.net/npm/vega@5.30.0"></script>
 <script src="https://cdn.jsdelivr.net/npm/vega-lite@5.21.0"></script>
 <script src="https://cdn.jsdelivr.net/npm/vega-embed@6.26.0"></script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;1,700&display=swap" rel="stylesheet">
 <style>
-  html, body {{ background:{bg}; color:{ink}; font-family:sans-serif; margin:0;
+  html, body {{ background:{bg}; color:{ink}; font-family:{font}; margin:0;
                overflow:hidden; }}
-  #controles {{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:8px; }}
-  button {{ background:{lane}; color:{ink}; border:1px solid {muted}; border-radius:6px;
-           padding:6px 14px; font-size:14px; cursor:pointer; }}
-  .vega-bindings {{ display:inline-block; margin-left:12px; }}
+  #controles {{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:14px 20px;
+                margin-bottom:14px; background:{panel}; border:1px solid {lane}; border-radius:8px; }}
+  button {{ background:{panel}; color:{ink}; border:1px solid {lane}; border-radius:4px;
+           padding:8px 18px; font:600 15px {font}; cursor:pointer; letter-spacing:.04em;
+           text-transform:uppercase; transition:background .15s, border-color .15s; }}
+  button:hover {{ border-color:{ink}; }}
+  button:focus-visible {{ outline:2px solid {ink}; outline-offset:2px; }}
+  #play {{ background:{rojo}; border-color:{rojo}; color:#fff; font-style:italic;
+          clip-path:polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); padding:6px 22px; }}
+  #play:hover {{ filter:brightness(1.12); }}
+  #selector {{ display:inline-block; margin-left:12px; }}
+  #selector {{ font:16px {font}; color:{ink}; }}
+  /* el desplegable igual que los de la app (assets/estilo.css, «.vega-bind select») */
+  #selector select {{ appearance:none; -webkit-appearance:none; min-height:40px;
+      padding:6px 38px 6px 12px; font:16px {font}; color:{ink}; cursor:pointer;
+      background:#EAE3D6 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4' fill='none' stroke='%231F2328' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center / 14px;
+      border:1px solid #D6CCBA; border-radius:.3rem; }}
+  #selector select:focus-visible {{ outline:2px solid {rojo}; outline-offset:2px; }}
+  .vega-bind-name {{ margin-right:8px; }}
   #marco {{ overflow:hidden; }}
   #vis {{ transform-origin:top left; }}
 </style></head><body>
@@ -685,7 +727,8 @@ def to_html(chart: alt.TopLevelMixin, duration_s: float = 6.0,
             title: str = "Autitos F1") -> str:
     """HTML autónomo con el gráfico y botones para correr la carrera y volver a la largada."""
     return _HTML.format(title=title, spec=json.dumps(chart.to_dict()), bg=ASPHALT, ink=INK,
-                        lane=LANE, muted=INK_MUTED, duration_ms=int(duration_s * 1000))
+                        lane=LANE, muted=INK_MUTED, panel=C.PANEL, rojo=C.F1_ROJO, font=C.FUENTE,
+                        duration_ms=int(duration_s * 1000))
 
 
 def save_html(chart: alt.TopLevelMixin, path: str | Path, duration_s: float = 6.0) -> Path:

@@ -1,6 +1,22 @@
+# Tema de la app: claro tipo papel (no cansa la vista), letras oscuras y el rojo F1 de acento.
+# Los colores que significan algo en los gráficos salen de graficos/colores.py.
 [theme]
-base = "dark"
-primaryColor = "#E10600"
-backgroundColor = "#15151E"
-secondaryBackgroundColor = "#1F1F2B"
-textColor = "#F0F0F0"
+base = "light"
+primaryColor = "#E10600"              # rojo F1: botones, sliders, pestaña activa (solo interfaz)
+backgroundColor = "#F4EFE6"           # papel: el mismo fondo que los gráficos
+secondaryBackgroundColor = "#EAE3D6"  # paneles (inputs, tablas)
+textColor = "#1F2328"
+borderColor = "#D6CCBA"
+linkColor = "#2166AC"
+font = "Titillium Web:https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,300;0,400;0,600;0,700;0,900;1,700;1,900&display=swap"
+headingFont = "Titillium Web"
+headingFontWeights = [900, 700, 700]
+codeFont = "monospace"
+baseFontSize = 18
+baseRadius = "0.3rem"
+dataframeHeaderBackgroundColor = "#EAE3D6"
+chartCategoricalColors = ["#2166AC", "#B8660B", "#52B788", "#6A1B4D", "#469990", "#E377C2"]
+
+[theme.sidebar]
+backgroundColor = "#ECE5D8"
+secondaryBackgroundColor = "#E2D9C8"

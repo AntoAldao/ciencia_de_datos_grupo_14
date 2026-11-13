@@ -1,170 +1,135 @@
-"""La identidad de Fórmula 1 de la app: la página es una vuelta al circuito.
+"""Look and feel F1 de la app: CSS, menú lateral, encabezado, títulos de sección y pie.
 
-Nada de esto toca los datos ni los gráficos: es HTML y CSS que Streamlit inserta alrededor.
+Solo decoración y navegación: no cambia ningún dato ni texto del análisis. Archivos en `assets/`:
+  estilo.css            el estilo de la interfaz (papel, piano, bandera a cuadros)
+  logo.svg              logo de la Fórmula 1
+  escuderias/<TeamId>   logos de cada equipo (ver assets/escuderias/LEEME.md)
+  tires/                neumáticos: uno por sección del tallo (blando, medio, duro)
+  circuit1..4.svg       trazados de circuitos, de marca de agua en los títulos
 
-    Vuelta de formación   portada: semáforo de largada (5 luces que se encienden y se apagan) y un
-                          circuito que se dibuja con un auto dando vueltas.
-    Sectores 1, 2 y 3     el tallo: cada sección arranca con su cartel de sector, como en la
-                          transmisión, y se separa de la siguiente con un piano (kerb) rojo y blanco.
-    Pit lane / boxes      la copa: el usuario toma el control.
-    Bandera a cuadros     el cierre.
-
-El recorrido:
-- Una barra fija abajo, como el zócalo de la transmisión, marca en qué parte de la vuelta estás y
-  se llena a medida que bajás (animación ligada al scroll, CSS `scroll-timeline`).
-- Cada bloque entra deslizándose cuando aparece en pantalla (`animation-timeline: view()`).
-Las dos animaciones usan CSS moderno: en navegadores que no lo soportan, la página se ve igual pero
-quieta. Y si el sistema pide menos movimiento (`prefers-reduced-motion`), no se anima nada.
-
-No usa logos ni marcas de la F1 ni de los equipos: solo colores, tipografía y formas genéricas.
+La app es una copa de martini: el tallo (secciones 1 a 3) lo guía el autor y la copa (Explorá y
+Probá el modelo) la maneja el usuario. El menú lateral muestra esas dos partes.
 """
-
 from __future__ import annotations
 
+import base64
+import html
+import io
+from functools import lru_cache
+from pathlib import Path
+
 import streamlit as st
+from PIL import Image
 
-ROJO = "#E10600"
-FONDO = "#15151E"
+from graficos import colores as C
+from graficos import logos
 
-CSS = f"""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&display=swap');
+ASSETS = Path(__file__).resolve().parent / "assets"
+_MIME = {".svg": "image/svg+xml", ".png": "image/png", ".webp": "image/webp"}
 
-/* ---------- base ---------- */
-.stApp {{ background: {FONDO}; }}
-header[data-testid="stHeader"] {{ background: transparent; }}
-h1, h2, h3, .f1-titulo, [data-testid="stMetricValue"] {{
-    font-family: 'Titillium Web', 'Segoe UI', sans-serif !important;
-}}
-h1 {{ font-weight: 900 !important; letter-spacing: -0.01em; }}
-h2 {{ font-weight: 700 !important; }}
-[data-testid="stMainBlockContainer"] {{ padding-bottom: 6rem; }}
+# Neumático y circuito de cada sección del tallo (como los compuestos de una carrera).
+RUEDAS = {1: "soft", 2: "medium", 3: "hard"}
+CIRCUITOS = {1: "circuit1", 2: "circuit2", 3: "circuit3"}
 
-/* la página es el circuito: la línea de largada a la izquierda */
-[data-testid="stMain"] {{ scroll-timeline: --vuelta y; scroll-behavior: smooth; }}
 
-/* ---------- números como la torre de tiempos ---------- */
-[data-testid="stMetric"] {{
-    background: linear-gradient(90deg, #1F1F2B 0%, #1A1A24 100%);
-    border-left: 5px solid {ROJO}; border-radius: 4px; padding: 14px 18px;
-}}
-[data-testid="stMetricValue"] {{ font-weight: 900; font-variant-numeric: tabular-nums; }}
-[data-testid="stMetricLabel"] p {{ text-transform: uppercase; letter-spacing: .06em; font-size: .78rem !important; color: #B8B8C4; }}
+@lru_cache(maxsize=None)
+def _data_uri(ruta: Path, alto: int = 0) -> str:
+    """Imagen como data URI. Las de mapa de bits se achican a `alto` px (los originales son
+    enormes) y se pasan a WebP para que la página no pese de más."""
+    if ruta.suffix == ".svg" or not alto:
+        datos, mime = ruta.read_bytes(), _MIME[ruta.suffix]
+    else:
+        img = Image.open(ruta).convert("RGBA")
+        img.thumbnail((alto, alto))
+        buf = io.BytesIO()
+        img.save(buf, "WEBP", quality=90)
+        datos, mime = buf.getvalue(), "image/webp"
+    return f"data:{mime};base64,{base64.b64encode(datos).decode()}"
 
-/* ---------- desplegables «Cómo lo sabemos»: como la telemetría del box ---------- */
-[data-testid="stExpander"] details {{ border: 1px solid #2E2E3A; border-left: 3px solid #6A6A78; background: #18181F; }}
-[data-testid="stExpander"] summary p {{ font-family: 'Titillium Web', sans-serif; font-weight: 700; letter-spacing: .04em; }}
 
-/* ---------- pestañas: como selector de cámara ---------- */
-button[data-baseweb="tab"] p {{ font-family: 'Titillium Web', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }}
+def _rueda(numero: int, alto: int = 160) -> str:
+    compuesto = RUEDAS.get(numero, "hard")
+    ruta = next(p for ext in (".webp", ".png") if (p := ASSETS / "tires" / f"{compuesto}{ext}").exists())
+    return _data_uri(ruta, alto)
 
-/* ---------- semáforo de largada ---------- */
-.f1-largada {{ position: relative; padding: 28px 0 8px; }}
-.f1-semaforo {{ display: flex; gap: 14px; margin: 0 0 22px; }}
-.f1-columna {{ background: #0B0B0F; border-radius: 10px; padding: 8px 7px; display: flex; flex-direction: column; gap: 7px;
-               box-shadow: inset 0 0 0 2px #26262F; }}
-.f1-luz {{ width: 30px; height: 30px; border-radius: 50%; background: #2A0303; }}
-.f1-luz.roja {{ animation: f1-prender 4.2s forwards; }}
-.f1-columna:nth-child(1) .roja {{ animation-delay: .3s; }}
-.f1-columna:nth-child(2) .roja {{ animation-delay: .9s; }}
-.f1-columna:nth-child(3) .roja {{ animation-delay: 1.5s; }}
-.f1-columna:nth-child(4) .roja {{ animation-delay: 2.1s; }}
-.f1-columna:nth-child(5) .roja {{ animation-delay: 2.7s; }}
-@keyframes f1-prender {{
-    0% {{ background: #2A0303; box-shadow: none; }}
-    3%, 92% {{ background: {ROJO}; box-shadow: 0 0 18px 4px rgba(225,6,0,.75); }}
-    100% {{ background: #2A0303; box-shadow: none; }}
-}}
-.f1-fuera {{ font-family: 'Titillium Web', sans-serif; font-weight: 900; letter-spacing: .3em; color: {ROJO};
-             font-size: .85rem; opacity: 0; animation: f1-aparecer .5s 4.4s forwards; }}
-.f1-largada h1, .f1-largada .f1-sub, .f1-largada .f1-circuito {{ opacity: 0; animation: f1-subir .9s forwards; }}
-.f1-largada h1 {{ animation-delay: 4.5s; font-size: 3.1rem; line-height: 1.05; max-width: 22ch; margin: 6px 0 14px; }}
-.f1-largada .f1-sub {{ animation-delay: 4.9s; font-size: 1.25rem; color: #C8C8D0; max-width: 62ch; }}
-.f1-largada .f1-circuito {{ animation-delay: 4.2s; position: absolute; right: 0; top: 10px; width: 38%; max-width: 460px; }}
-@keyframes f1-aparecer {{ to {{ opacity: 1; }} }}
-@keyframes f1-subir {{ from {{ opacity: 0; transform: translateY(18px); }} to {{ opacity: 1; transform: none; }} }}
 
-/* el circuito se dibuja y un auto da vueltas */
-.f1-pista {{ fill: none; stroke: #3A3A48; stroke-width: 16; stroke-linecap: round; stroke-linejoin: round; }}
-.f1-trazo {{ fill: none; stroke: {ROJO}; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
-             stroke-dasharray: 1400; stroke-dashoffset: 1400; animation: f1-dibujar 2.6s 4.4s ease-out forwards; }}
-@keyframes f1-dibujar {{ to {{ stroke-dashoffset: 0; }} }}
+def _circuito(numero: int) -> str:
+    return _data_uri(ASSETS / f"{CIRCUITOS.get(numero, 'circuit4')}.svg")
 
-/* ---------- cartel de sector ---------- */
-.f1-sector {{ display: flex; align-items: stretch; gap: 0; margin: 10px 0 4px; font-family: 'Titillium Web', sans-serif; }}
-.f1-sector .num {{ background: {ROJO}; color: white; font-weight: 900; padding: 4px 14px; font-size: 1.05rem;
-                   clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%); padding-right: 22px; }}
-.f1-sector .nombre {{ background: #22222D; color: #F0F0F0; font-weight: 700; padding: 4px 16px; letter-spacing: .12em;
-                      text-transform: uppercase; font-size: .95rem; }}
-.f1-sector .mini {{ display: flex; gap: 3px; align-items: center; padding-left: 10px; }}
-.f1-sector .mini i {{ display: block; width: 22px; height: 6px; border-radius: 2px; background: #3A3A48; }}
-.f1-sector .mini i.on {{ background: var(--c); }}
 
-/* ---------- piano (kerb) entre secciones ---------- */
-.f1-kerb {{ height: 12px; margin: 44px 0 30px; border-radius: 2px;
-            background: repeating-linear-gradient(90deg, {ROJO} 0 34px, #F4F4F4 34px 68px);
-            transform: skewX(-25deg); opacity: .9; }}
+def aplicar() -> None:
+    """Carga el CSS de la app (estilo.css y, encima, la vuelta al circuito de vuelta.css) y el
+    zócalo fijo. Llamar una vez, arriba de todo."""
+    css = "".join((ASSETS / f).read_text(encoding="utf-8") for f in ("estilo.css", "vuelta.css"))
+    st.html(f"<style>{css}</style>")
+    zocalo()
 
-/* ---------- pit lane ---------- */
-.f1-pit {{ margin: 10px 0 18px; padding: 22px 26px; border-radius: 6px; position: relative; overflow: hidden;
-           background: repeating-linear-gradient(-45deg, #1C1C24 0 18px, #20202A 18px 36px); border: 1px solid #2E2E3A; }}
-.f1-pit .linea {{ position: absolute; left: 0; right: 0; bottom: 12px; height: 4px;
-                  background: repeating-linear-gradient(90deg, #F4F4F4 0 26px, transparent 26px 46px); opacity: .7; }}
-.f1-pit .cartel {{ display: inline-block; background: #F4F4F4; color: #111; font-family: 'Titillium Web', sans-serif;
-                   font-weight: 900; padding: 2px 12px; letter-spacing: .2em; border-radius: 3px; margin-right: 12px; }}
-.f1-pit .limite {{ display: inline-flex; width: 46px; height: 46px; border-radius: 50%; border: 5px solid {ROJO};
-                   background: #F4F4F4; color: #111; font-weight: 900; align-items: center; justify-content: center;
-                   font-family: 'Titillium Web', sans-serif; float: right; }}
-.f1-pit h2 {{ margin: 10px 0 4px !important; }}
-.f1-pit p {{ color: #C8C8D0; margin: 0 0 14px; max-width: 70ch; }}
 
-/* ---------- bandera a cuadros ---------- */
-.f1-bandera {{ margin: 40px 0 10px; border-radius: 8px; overflow: hidden; position: relative; }}
-.f1-bandera .cuadros {{ height: 70px; background: conic-gradient(#F4F4F4 25%, #111 0 50%, #F4F4F4 0 75%, #111 0) 0 0 / 35px 35px;
-                        animation: f1-flamear 2.5s ease-in-out infinite alternate; transform-origin: left center; }}
-@keyframes f1-flamear {{ from {{ transform: skewY(0deg); }} to {{ transform: skewY(-1.5deg); }} }}
-.f1-bandera .texto {{ background: #1C1C24; padding: 22px 26px; }}
-.f1-bandera .texto b {{ font-family: 'Titillium Web', sans-serif; font-size: 1.5rem; font-weight: 900; display: block; margin-bottom: 6px; }}
-.f1-bandera a {{ color: {ROJO}; font-weight: 700; text-decoration: none; }}
+def menu(recorrido: list[str], explorar: list[tuple[str, str, str]]) -> None:
+    """Menú lateral: el objetivo, el recorrido (los tres sectores, en orden) y las partes para
+    explorar por tu cuenta. Los nombres son para el usuario, no la estructura del relato."""
+    pasos_tallo = "".join(
+        f'<a class="f1-nav-item" href="#seccion-{i}"><img src="{_rueda(i, 64)}" alt="">'
+        f'<span><small>Sector {i}</small>{html.escape(t)}</span></a>'
+        for i, t in enumerate(recorrido, start=1))
+    pasos_explorar = "".join(   # (texto, ancla, ícono): cada uno lleva a su propia sección
+        f'<a class="f1-nav-item explorar" href="#{ancla}"><i>{icono}</i>'
+        f'<span>{html.escape(t)}</span></a>' for t, ancla, icono in explorar)
+    st.sidebar.html(
+        f'<div class="f1-nav">'
+        f'<a class="f1-nav-logo" href="#portada"><img src="{_data_uri(ASSETS / "logo.svg")}" '
+        f'alt="Fórmula 1"><b>Grupo 14</b></a>'
+        f'<a class="f1-nav-item portada" href="#portada"><i>🏁</i><span>El objetivo</span></a>'
+        f'<div class="f1-nav-parte"><b>El recorrido</b><span>de los datos al modelo</span></div>'
+        f'<div class="f1-nav-grupo">{pasos_tallo}</div>'
+        f'<div class="f1-nav-parte"><b>Explorá por tu cuenta</b><span>temporadas, carreras y el modelo</span></div>'
+        f'<div class="f1-nav-grupo explorar">{pasos_explorar}</div>'
+        f'</div>')
 
-/* ---------- zócalo fijo: la vuelta ---------- */
-.f1-zocalo {{ position: fixed; left: 0; right: 0; bottom: 0; z-index: 999990; height: 42px; display: flex;
-              align-items: center; gap: 0; background: rgba(12,12,16,.94); border-top: 2px solid {ROJO};
-              font-family: 'Titillium Web', sans-serif; backdrop-filter: blur(6px); }}
-.f1-zocalo .vuelta {{ background: {ROJO}; color: #fff; font-weight: 900; height: 100%; display: flex; align-items: center;
-                      padding: 0 16px; letter-spacing: .12em; font-size: .85rem; }}
-.f1-zocalo nav {{ display: flex; flex: 1; height: 100%; }}
-.f1-zocalo nav a {{ flex: 1; display: flex; align-items: center; justify-content: center; color: #C8C8D0; text-decoration: none;
-                    font-weight: 700; font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; border-left: 1px solid #26262F; }}
-.f1-zocalo nav a:hover {{ color: #fff; background: #1F1F2B; }}
-.f1-progreso {{ position: absolute; left: 0; top: -2px; height: 2px; width: 100%; background: #F4F4F4;
-                transform-origin: left; transform: scaleX(0); }}
 
-@supports (animation-timeline: scroll()) {{
-  @media (prefers-reduced-motion: no-preference) {{
-    .f1-progreso {{ animation: f1-llenar linear both; animation-timeline: --vuelta; }}
-    @keyframes f1-llenar {{ to {{ transform: scaleX(1); }} }}
-    /* cada bloque entra a pista cuando aparece en pantalla */
-    [data-testid="stMainBlockContainer"] [data-testid="stVerticalBlock"] > [data-testid="stElementContainer"]:not(:has(.f1-zocalo, .f1-largada, style)),
-    [data-testid="stMainBlockContainer"] [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"],
-    [data-testid="stMainBlockContainer"] [data-testid="stVerticalBlock"] > [data-testid="stExpander"] {{
-        animation: f1-entrar linear both; animation-timeline: view(); animation-range: entry 0% entry 40%;
-    }}
-    @keyframes f1-entrar {{ from {{ opacity: 0; transform: translateX(-40px); }} to {{ opacity: 1; transform: none; }} }}
-    .f1-kerb {{ animation: f1-kerb linear both; animation-timeline: view(); animation-range: entry 0% cover 40%; }}
-    @keyframes f1-kerb {{ from {{ clip-path: inset(0 100% 0 0); }} to {{ clip-path: inset(0 0 0 0); }} }}
-  }}
-}}
-/* Con "reducir movimiento" (en Windows: Efectos de animación apagados) se saca lo que se MUEVE,
-   pero el semáforo se enciende igual: es un cambio de color, no un movimiento. */
-@media (prefers-reduced-motion: reduce) {{
-  .f1-largada h1, .f1-largada .f1-sub, .f1-largada .f1-circuito {{ animation-name: f1-aparecer !important; }}
-  .f1-trazo {{ animation: none !important; stroke-dashoffset: 0 !important; }}
-  .f1-bandera .cuadros {{ animation: none !important; }}
-}}
-@media (max-width: 900px) {{ .f1-largada .f1-circuito {{ display: none; }} .f1-largada h1 {{ font-size: 2.2rem; }} }}
-</style>
-"""
+def encabezado(equipos: list[str], subtitulo: str) -> None:
+    """Logo F1, marca del grupo y la banda de escuderías (decorativa, no se puede tocar)."""
+    items = []
+    for team in equipos:
+        nombre = logos.nombre(team)
+        logo = logos.uri(team)
+        dentro = (f'<img src="{logo}" alt="{html.escape(nombre)}">' if logo
+                  else f'<span>{html.escape(nombre)}</span>')
+        items.append(f'<div class="f1-escuderia" style="--equipo:{_color(team)}">{dentro}</div>')
+    st.html(
+        f'<div id="portada" class="f1-hero" style="--circuito:url({_circuito(4)})">'
+        f'<img class="f1-hero-logo" src="{_data_uri(ASSETS / "logo.svg")}" alt="Fórmula 1">'
+        f'<div class="f1-marca"><b>Grupo 14</b><span>{html.escape(subtitulo)}</span></div></div>'
+        f'<div class="f1-parrilla" role="img" aria-label="Escuderías">{"".join(items)}</div>')
+
+
+def _color(team: str) -> str:
+    return C.ESCUDERIAS.get(team, C.ESCUDERIA_DEFECTO)
+
+
+def parte(id_: str, nombre: str, bajada: str) -> None:
+    """Rótulo que marca dónde empieza cada parte de la página (y ancla del menú)."""
+    st.html(f'<div id="{id_}" class="f1-parte"><b>{html.escape(nombre)}</b>'
+            f'<span>{html.escape(bajada)}</span></div>')
+
+
+def seccion(numero: int, titulo: str) -> None:
+    """Título de una sección del tallo: neumático + título + trazado de circuito de fondo."""
+    st.html(
+        f'<div id="seccion-{numero}" class="f1-seccion" style="--circuito:url({_circuito(numero)})">'
+        f'<img class="f1-rueda" src="{_rueda(numero)}" alt="">'
+        f'<h2>{html.escape(f"{numero}. {titulo}")}</h2></div>')
+
+
+def pie(texto_izq: str, texto_der: str) -> None:
+    st.html(f'<div class="f1-pie"><span>{html.escape(texto_izq)}</span>'
+            f'<span>{html.escape(texto_der)}</span></div>')
+
+
+# ------------------------------------------------------------------------------------------------
+# La página como una vuelta al circuito (PR #5, «Identidad de F1 y recorrido»), en el tema claro.
+# El CSS está en assets/vuelta.css. Sin logos ni marcas: solo colores, tipografía y formas.
+# ------------------------------------------------------------------------------------------------
 
 # Un circuito genérico (inventado), la misma forma que recorre el auto.
 _PISTA = ("M60 200 L150 200 C190 200 200 170 230 150 L300 100 C330 80 370 90 380 120 L390 160 "
@@ -179,9 +144,9 @@ def _html(codigo: str) -> None:
     st.markdown(codigo, unsafe_allow_html=True)
 
 
-def aplicar() -> None:
-    """El CSS de toda la app y el zócalo fijo de la vuelta. Llamar una vez, arriba de todo."""
-    _html(CSS)
+def zocalo() -> None:
+    """El zócalo fijo abajo, como el de la transmisión: cada nombre lleva a su parte de la vuelta
+    y una línea se llena a medida que se baja."""
     enlaces = "".join(f'<a href="#{ancla}" target="_self">{nombre}</a>' for ancla, nombre in SECCIONES)
     _html(f'<div class="f1-zocalo"><div class="f1-progreso"></div><div class="vuelta">VUELTA 1/1</div>'
           f'<nav>{enlaces}</nav></div>')
@@ -193,13 +158,13 @@ def largada(pregunta: str, idea: str) -> None:
                        for _ in range(5))
     circuito = (f'<svg class="f1-circuito" viewBox="20 70 390 240" aria-hidden="true">'
                 f'<path class="f1-pista" d="{_PISTA}"/><path class="f1-trazo" d="{_PISTA}"/>'
-                f'<rect x="56" y="188" width="6" height="24" fill="#F4F4F4"/>'
-                f'<circle class="f1-auto" r="7" fill="{ROJO}" stroke="#fff" stroke-width="2" opacity="0">'
+                f'<rect x="56" y="188" width="6" height="24" fill="#FFFFFF"/>'
+                f'<circle class="f1-auto" r="7" fill="{C.F1_ROJO}" stroke="#fff" stroke-width="2" opacity="0">'
                 f'<set attributeName="opacity" to="1" begin="5.6s"/>'
                 f'<animateMotion dur="7s" begin="5.6s" repeatCount="indefinite" path="{_PISTA}"/></circle></svg>')
     _html(f'<div id="largada" class="f1-largada">{circuito}<div class="f1-semaforo">{columnas}</div>'
           f'<div class="f1-fuera">LUCES FUERA · ARRANCA LA VUELTA</div>'
-          f'<h1>{pregunta}</h1><p class="f1-sub">{idea}</p></div>')
+          f'<h1>{html.escape(pregunta)}</h1><p class="f1-sub">{html.escape(idea)}</p></div>')
 
 
 def sector(numero: int, nombre: str) -> None:
@@ -207,7 +172,7 @@ def sector(numero: int, nombre: str) -> None:
     colores = ["#FFD12E", "#3DDC84", "#B65CFF"]   # como los minisectores de la transmisión
     mini = "".join(f'<i class="{"on" if i < numero else ""}" style="--c:{c}"></i>' for i, c in enumerate(colores))
     _html(f'<div id="sector-{numero}" class="f1-sector"><span class="num">S{numero}</span>'
-          f'<span class="nombre">{nombre}</span><span class="mini">{mini}</span></div>')
+          f'<span class="nombre">{html.escape(nombre)}</span><span class="mini">{mini}</span></div>')
 
 
 def piano() -> None:
@@ -218,11 +183,13 @@ def piano() -> None:
 def pit_lane(titulo: str, texto: str) -> None:
     """Entrada a la copa: de acá en adelante maneja el usuario."""
     _html(f'<div id="boxes" class="f1-pit"><span class="limite">80</span><span class="cartel">PIT</span>'
-          f'<span style="color:#B8B8C4;letter-spacing:.12em;font-weight:700;font-size:.85rem">BOXES ABIERTOS</span>'
-          f'<h2>{titulo}</h2><p>{texto}</p><div class="linea"></div></div>')
+          f'<span class="estado">BOXES ABIERTOS</span>'
+          f'<h2>{html.escape(titulo)}</h2><p>{html.escape(texto)}</p><div class="linea"></div></div>')
 
 
-def bandera(titulo: str, texto: str) -> None:
+def bandera(titulo: str, texto: str, pie: str = "") -> None:
     """Cierre: bandera a cuadros, la conclusión y volver a largar."""
+    pie_html = f'<br><span class="pie">{html.escape(pie)}</span>' if pie else ""
     _html(f'<div id="bandera" class="f1-bandera"><div class="cuadros"></div><div class="texto">'
-          f'<b>{titulo}</b>{texto}<br><br><a href="#largada" target="_self">↺ Volver a largar</a></div></div>')
+          f'<b>{html.escape(titulo)}</b>{html.escape(texto)}{pie_html}<br><br>'
+          f'<a href="#largada" target="_self">↺ Volver a largar</a></div></div>')

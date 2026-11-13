@@ -1,0 +1,305 @@
+/* Look and feel F1 de la app, en claro tipo papel (no cansa la vista) con letras oscuras.
+   Solo interfaz: los colores de los datos están en graficos/colores.py.
+   Rojo F1 = acento decorativo (nunca un dato). Tipografía: Titillium Web (.streamlit/config.toml). */
+
+:root {
+  --f1-rojo: #E10600;
+  --f1-papel: #F4EFE6;
+  --f1-panel: #FBF8F2;
+  --f1-hueco: #ECE5D8;
+  --f1-linea: #DDD5C7;
+  --f1-borde: #D6CCBA;
+  --f1-tinta: #1F2328;
+  --f1-tinta-suave: #575C63;
+  --f1-negro: #15151E;
+  --f1-hueco-input: #EAE3D6;   /* relleno de los desplegables (secondaryBackgroundColor) */
+  --f1-casilla: #F7F4ED;       /* casilla y opción sin marcar, como las de Streamlit */
+  --f1-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4' fill='none' stroke='%231F2328' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --f1-tilde: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --f1-sombra: 0 1px 2px rgba(60, 45, 20, .06), 0 6px 18px rgba(60, 45, 20, .07);
+  --f1-kerb: repeating-linear-gradient(90deg, var(--f1-rojo) 0 28px, #FFFFFF 28px 56px);
+  --f1-cuadros: conic-gradient(var(--f1-negro) 25%, var(--f1-panel) 0 50%, var(--f1-negro) 0 75%, var(--f1-panel) 0) 0 0 / 12px 12px;
+}
+
+/* ---------- Página ---------- */
+[data-testid="stDecoration"] { background: var(--f1-kerb); height: 5px; }
+[data-testid="stHeader"] { background: rgba(244, 239, 230, .9); backdrop-filter: blur(6px); }
+.stApp { background: var(--f1-papel); color: var(--f1-tinta); }
+[data-testid="stMainBlockContainer"] { max-width: 1560px; padding: 3.2rem 2.75rem 2rem; }
+[data-testid="stMainBlockContainer"] p,
+[data-testid="stMainBlockContainer"] li { line-height: 1.6; }
+[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p {
+  font-size: 1rem !important; color: var(--f1-tinta-suave) !important;
+}
+
+/* ---------- Menú lateral: el objetivo, el recorrido y explorá por tu cuenta ---------- */
+[data-testid="stSidebar"] { border-right: 1px solid var(--f1-borde); }
+.f1-nav { display: flex; flex-direction: column; gap: 4px; padding-top: 4px; }
+.f1-nav a { text-decoration: none !important; color: var(--f1-tinta) !important; }
+.f1-nav-logo {
+  display: flex; align-items: center; gap: 12px; padding: 4px 6px 16px; margin-bottom: 6px;
+  border-bottom: 3px solid transparent; border-image: var(--f1-kerb) 1;
+}
+.f1-nav-logo img { height: 26px; width: auto; }
+.f1-nav-logo b { font-weight: 900; font-style: italic; font-size: 1.15rem; text-transform: uppercase; }
+.f1-nav-parte { display: flex; flex-direction: column; margin: 16px 6px 4px; line-height: 1.2; }
+.f1-nav-parte b {
+  font-size: .8rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--f1-rojo);
+}
+.f1-nav-parte span { font-size: .85rem; color: var(--f1-tinta-suave); }
+/* El recorrido: una línea que une los sectores (se lee en orden); explorá: un panel aparte */
+.f1-nav-grupo { position: relative; margin-left: 22px; padding-left: 12px; border-left: 3px solid var(--f1-borde); }
+.f1-nav-grupo.explorar {
+  margin-left: 6px; padding: 6px;
+  background: var(--f1-panel); border: 1px solid var(--f1-borde); border-radius: 8px;
+}
+.f1-nav-item {
+  display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 6px;
+  font-size: 1rem; font-weight: 600; line-height: 1.2; transition: background .15s ease;
+}
+.f1-nav-item:hover { background: rgba(225, 6, 0, .07); }
+.f1-nav-item:focus-visible { outline: 2px solid var(--f1-rojo); outline-offset: 2px; }
+.f1-nav-item img { width: 34px; height: 34px; flex: 0 0 auto; }
+.f1-nav-item i {
+  width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center;
+  font-style: normal; font-size: 1.1rem; background: var(--f1-hueco); border-radius: 50%;
+}
+.f1-nav-item span { display: flex; flex-direction: column; }
+.f1-nav-item small {
+  font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--f1-tinta-suave);
+}
+.f1-nav-item.portada { margin-left: 6px; }
+
+/* ---------- Encabezado ---------- */
+.f1-hero {
+  position: relative; overflow: hidden; scroll-margin-top: 80px;
+  display: flex; align-items: center; gap: 22px; flex-wrap: wrap;
+  padding: 18px 24px;
+  background: var(--f1-panel); border: 1px solid var(--f1-borde); border-bottom: none;
+  border-radius: 10px 10px 0 0;
+}
+.f1-hero::before {           /* trazado de circuito de marca de agua */
+  content: ""; position: absolute; right: 150px; top: -30%; bottom: -30%; width: 260px;
+  background: var(--circuito) center / contain no-repeat; opacity: .08;
+}
+.f1-hero::after {            /* bandera a cuadros en la punta derecha */
+  content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 130px;
+  background: var(--f1-cuadros);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 85%);
+  mask-image: linear-gradient(90deg, transparent, #000 85%);
+  opacity: .5;
+}
+.f1-hero .f1-hero-logo { height: 40px; width: auto; }
+.f1-hero .f1-marca {
+  display: flex; flex-direction: column; line-height: 1.15;
+  padding-left: 22px; border-left: 1px solid var(--f1-borde);
+}
+.f1-hero .f1-marca b {
+  font-weight: 900; font-style: italic; font-size: 1.7rem; letter-spacing: .02em;
+  text-transform: uppercase; color: var(--f1-tinta);
+}
+.f1-hero .f1-marca span {
+  font-weight: 600; font-size: .9rem; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--f1-tinta-suave);
+}
+
+/* Banda de escuderías: decorativa (no se puede tocar). Logos con sus colores originales y,
+   debajo de cada uno, una línea con el color de identidad del equipo (el mismo de los autos). */
+.f1-parrilla {
+  display: flex; align-items: stretch; flex-wrap: wrap;
+  margin: 0 0 2rem; padding: 14px 10px 0;
+  background: #FFFFFF; border: 1px solid var(--f1-borde); border-radius: 0 0 10px 10px;
+  box-shadow: var(--f1-sombra);
+  pointer-events: none; user-select: none; cursor: default;
+}
+.f1-escuderia {
+  flex: 1 1 90px; min-width: 70px; height: 60px; padding: 0 10px 14px;
+  display: flex; align-items: center; justify-content: center; position: relative;
+}
+.f1-escuderia::after {
+  content: ""; position: absolute; left: 22%; right: 22%; bottom: 0; height: 4px;
+  background: var(--equipo); border-radius: 2px 2px 0 0;
+}
+.f1-escuderia + .f1-escuderia { border-left: 1px solid var(--f1-linea); }
+.f1-escuderia img { max-height: 36px; max-width: 100%; object-fit: contain; }
+.f1-escuderia span {
+  font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--f1-tinta); white-space: nowrap;
+}
+
+/* ---------- Títulos ---------- */
+h1 { font-style: italic; letter-spacing: -.01em; line-height: 1.1 !important; color: var(--f1-tinta); }
+[data-testid="stMainBlockContainer"] h3 { font-weight: 700; color: var(--f1-tinta); }
+
+/* Rótulos de las dos partes de la página */
+.f1-parte {
+  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  margin: .5rem 0 .2rem; scroll-margin-top: 80px;
+}
+.f1-parte b {
+  font-size: .95rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase;
+  color: #FFFFFF; background: var(--f1-rojo); padding: 4px 18px 4px 12px;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+}
+.f1-parte span { font-size: 1.05rem; color: var(--f1-tinta-suave); }
+
+/* Secciones del tallo: neumático (blando, medio, duro) + título + circuito de fondo */
+.f1-seccion {
+  position: relative; display: flex; align-items: center; gap: 20px;
+  margin: 1.6rem 0 .6rem; padding: 6px 0; scroll-margin-top: 80px;
+}
+.f1-seccion::after {
+  content: ""; position: absolute; right: 0; top: -20%; bottom: -20%; width: 180px;
+  background: var(--circuito) center / contain no-repeat; opacity: .08; pointer-events: none;
+}
+.f1-seccion .f1-rueda {
+  flex: 0 0 auto; width: 64px; height: 64px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .18));
+  animation: f1-girar 1.2s cubic-bezier(.2, .7, .2, 1) both;
+}
+.f1-seccion h2 {
+  margin: 0; padding: 0 200px 0 0; font-size: 2.25rem; font-weight: 700; line-height: 1.2;
+  color: var(--f1-tinta);
+}
+@keyframes f1-girar { from { transform: rotate(-200deg); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---------- Métricas como tablero de tiempos ---------- */
+[data-testid="stMetric"] {
+  background: var(--f1-panel);
+  border: 1px solid var(--f1-borde); border-top: 4px solid var(--f1-rojo);
+  border-radius: 8px; padding: 16px 20px 14px; box-shadow: var(--f1-sombra);
+  height: 100%; box-sizing: border-box;
+}
+/* Cartas en fila: todas del alto de la más alta (cada rótulo ocupa distintas líneas) */
+[data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) { align-items: stretch; }
+[data-testid="stColumn"]:has([data-testid="stMetric"]),
+[data-testid="stColumn"]:has([data-testid="stMetric"]) [data-testid="stVerticalBlock"],
+[data-testid="stColumn"]:has([data-testid="stMetric"]) [data-testid="stElementContainer"] {
+  height: 100%;
+}
+/* Rótulo de al menos dos líneas: los números quedan a la misma altura en las tres cartas */
+[data-testid="stMetricLabel"] { min-height: 2.9em; align-items: flex-start; }
+[data-testid="stMetricLabel"] p {
+  font-size: .85rem !important; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--f1-tinta-suave);
+}
+[data-testid="stMetricLabel"] .stMarkdownEllipsis,
+[data-testid="stMetricLabel"] .stMarkdownEllipsis p {   /* el rótulo completo, sin «...» */
+  white-space: normal !important; overflow: visible !important; text-overflow: clip !important;
+}
+[data-testid="stMetricValue"] {
+  font-weight: 700; font-style: italic; font-variant-numeric: tabular-nums; color: var(--f1-tinta);
+  font-size: clamp(1.5rem, 2.4vw, 2.25rem) !important;   /* se achica antes de cortarse */
+}
+[data-testid="stMetricValue"] > div {   /* el valor completo, sin «...»: si no entra, baja de línea */
+  white-space: normal !important; overflow: visible !important; text-overflow: clip !important;
+}
+/* Con delta (p. ej. «Puesto predicho con tus valores»): la flecha va a la derecha del número, no
+   abajo, así la tarjeta no crece y queda del alto de las demás. */
+[data-testid="stMetric"] > div:has([data-testid="stMetricDelta"]) {
+  display: flex; flex-wrap: wrap; align-items: center; column-gap: 14px;
+}
+[data-testid="stMetric"] > div:has([data-testid="stMetricDelta"]) > label { flex: 0 0 100%; }
+[data-testid="stMetricDelta"] { margin: 0 !important; font-size: 1.1rem; font-weight: 700; }
+
+/* ---------- Separadores: bandera a cuadros ---------- */
+[data-testid="stMainBlockContainer"] hr {
+  border: none !important; height: 12px !important; margin: 2.4rem 0 !important;
+  background: var(--f1-cuadros) !important; opacity: .35;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
+}
+
+/* ---------- Pestañas ---------- */
+[data-testid="stTabs"] [role="tablist"] { gap: 6px; }
+[data-testid="stTab"] {
+  background: var(--f1-hueco); border-radius: 6px 6px 0 0; padding: 10px 20px !important;
+}
+[data-testid="stTab"] p {
+  font-weight: 700; letter-spacing: .05em; text-transform: uppercase; font-size: .95rem;
+  color: var(--f1-tinta);
+}
+[data-testid="stTab"][aria-selected="true"] { background: var(--f1-panel); }
+[data-testid="stTab"][aria-selected="true"] p { color: var(--f1-rojo); }
+
+/* ---------- Expanders («Cómo lo sabemos») ---------- */
+[data-testid="stExpander"] details {
+  background: var(--f1-panel); border-color: var(--f1-borde); border-radius: 8px;
+}
+[data-testid="stExpander"] summary p { font-weight: 700; letter-spacing: .03em; }
+
+/* ---------- Gráficos: tarjeta con aire alrededor ---------- */
+[data-testid="stVegaLiteChart"], [data-testid="stIFrame"] {
+  border: 1px solid var(--f1-borde); border-radius: 10px; overflow: hidden;
+  background: var(--f1-papel); box-sizing: border-box; box-shadow: var(--f1-sombra);
+}
+[data-testid="stVegaLiteChart"] { padding: 14px 20px 18px; }
+/* Controles dentro de los gráficos (temporada, pasos, casillas): con aire y alineados, y
+   siempre ARRIBA del gráfico (Vega los pone abajo): primero se elige y después se mira, igual que
+   en «Carrera por carrera», y en los gráficos altos no quedan fuera de la pantalla. */
+[data-testid="stVegaLiteChart"] { display: flex !important; flex-direction: column; align-items: flex-start; }
+[data-testid="stVegaLiteChart"] > .vega-bindings { align-self: stretch; }
+[data-testid="stVegaLiteChart"] .vega-bindings {
+  order: -1;
+  display: flex !important; flex-wrap: wrap; align-items: center; gap: 12px 30px;
+  margin: 0 0 14px !important; padding: 14px 20px !important; box-sizing: border-box;
+  background: var(--f1-panel); border: 1px solid var(--f1-borde); border-radius: 8px;
+  font-size: 1rem;
+}
+[data-testid="stVegaLiteChart"] .vega-bind {
+  display: flex !important; margin: 0 !important; align-items: center; gap: 8px;
+}
+/* Los controles de los gráficos copian a los de Streamlit (tema de .streamlit/config.toml), así
+   un desplegable, una casilla o un rótulo se ven igual estén donde estén. Los mismos valores se
+   repiten en la página de «Carrera por carrera» (graficos/race_cars.py, `to_html`). */
+.vega-bind-name { min-width: 0 !important; margin-right: 4px; color: var(--f1-tinta); font-weight: 400; }
+.vega-bind select {
+  appearance: none; -webkit-appearance: none; min-height: 40px; min-width: 110px;
+  padding: 6px 38px 6px 12px; font: inherit; color: var(--f1-tinta); cursor: pointer;
+  background: var(--f1-hueco-input) var(--f1-chevron) no-repeat right 12px center / 14px;
+  border: 1px solid var(--f1-borde); border-radius: .3rem;
+}
+.vega-bind select:hover { border-color: var(--f1-tinta-suave); }
+.vega-bind-radio label { margin-right: 14px; display: inline-flex; align-items: center; gap: 6px; }
+.vega-bind input[type="checkbox"], .vega-bind input[type="radio"] {
+  appearance: none; -webkit-appearance: none; margin: 0; flex: 0 0 auto; cursor: pointer;
+  width: 1.1rem; height: 1.1rem; background: var(--f1-casilla); border: 1px solid var(--f1-borde);
+  border-radius: 4px; display: inline-grid; place-content: center;
+}
+.vega-bind input[type="radio"] { border-radius: 50%; }
+.vega-bind input[type="checkbox"]:checked {
+  background: var(--f1-rojo) var(--f1-tilde) no-repeat center / 80%; border-color: var(--f1-rojo);
+}
+.vega-bind input[type="radio"]:checked {
+  background: var(--f1-rojo); border-color: var(--f1-rojo); box-shadow: inset 0 0 0 3px var(--f1-casilla);
+}
+.vega-bind input:focus-visible, .vega-bind select:focus-visible {
+  outline: 2px solid var(--f1-rojo); outline-offset: 2px;
+}
+
+/* ---------- Pie ---------- */
+.f1-pie {
+  margin-top: 3rem; padding: 14px 0 6px; border-top: 4px solid transparent;
+  border-image: var(--f1-kerb) 1;
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  font-size: .85rem; letter-spacing: .12em; text-transform: uppercase; color: var(--f1-tinta-suave);
+}
+
+@media (max-width: 640px) {
+  [data-testid="stMainBlockContainer"] { padding: 3rem 1rem 2rem; }
+  .f1-hero .f1-marca b { font-size: 1.2rem; }
+  .f1-hero::after { width: 60px; }
+  .f1-escuderia { flex-basis: 25%; }
+  .f1-seccion h2 { font-size: 1.55rem; padding-right: 0; }
+  .f1-seccion .f1-rueda { width: 44px; height: 44px; }
+  .f1-seccion::after, .f1-hero::before { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .f1-seccion .f1-rueda { animation: none; }
+  .f1-nav-item { transition: none; }
+}
+
+/* Gráficos sin controles: Vega deja el contenedor vacío; no mostrarlo */
+[data-testid="stVegaLiteChart"] .vega-bindings:empty { display: none !important; }

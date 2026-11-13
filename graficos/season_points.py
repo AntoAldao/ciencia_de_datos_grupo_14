@@ -37,7 +37,7 @@ SCENARIOS = {
     "Grilla ajustada": "grid_adj",
 }
 # El color dice de dónde sale el orden (realidad / modelo / grilla) y el punteado, que está
-# ajustado por abandonos. Azul y naranja: slots 1 y 2 de la paleta de referencia (dataviz).
+# ajustado por abandonos. Azul y ámbar: slots 1 y 2 de la paleta de referencia (dataviz).
 SCENARIO_COLORS = {"Realidad": C.REAL, "Modelo": C.MODELO, "Modelo ajustado": C.MODELO,
                    "Grilla": C.GRILLA, "Grilla ajustada": C.GRILLA}
 SCENARIO_DASH = {"Realidad": [1, 0], "Modelo": [1, 0], "Modelo ajustado": [6, 4],
@@ -133,7 +133,7 @@ def points_chart(points: pd.DataFrame, width: int = 860, height: int = 380,
     ).add_params(piloto)
     ends = top_base.transform_window(
         last="rank()", groupby=["driver"], sort=[alt.SortField("round", order="descending")]
-    ).transform_filter("datum.last == 1").mark_text(align="left", dx=6, fontSize=10,
+    ).transform_filter("datum.last == 1").mark_text(align="left", dx=6, fontSize=12,
                                                     fontWeight="bold").encode(
         x=x, y=alt.Y("label_y_all:Q"), text="driver:N", color=alt.Color("color:N", scale=None),
         opacity=highlight)
@@ -143,7 +143,7 @@ def points_chart(points: pd.DataFrame, width: int = 860, height: int = 380,
             subtitle=["Puntos 25-18-15-12-10-8-6-4-2-1, solo carrera principal (sin sprints ni "
                       "vuelta rápida), con el orden de llegada del escenario elegido.",
                       "Clic en un piloto para ver abajo sus cinco escenarios."],
-            color=INK, subtitleColor=INK_MUTED, anchor="start", fontSize=15))
+            color=INK, subtitleColor=INK_MUTED, anchor="start", fontSize=17))
 
     # Abajo: el piloto elegido en los cinco escenarios.
     color = alt.Color("scenario:N", sort=scenarios, title=None, scale=alt.Scale(
@@ -160,18 +160,18 @@ def points_chart(points: pd.DataFrame, width: int = 860, height: int = 380,
         last="rank()", groupby=["scenario"], sort=[alt.SortField("round", order="descending")]
     ).transform_filter("datum.last == 1").transform_calculate(
         label="datum.scenario + ': ' + datum.cum_pts").mark_text(
-        align="left", dx=6, fontSize=11).encode(x=x, y=alt.Y("label_y_one:Q"), text="label:N",
+        align="left", dx=6, fontSize=13).encode(x=x, y=alt.Y("label_y_one:Q"), text="label:N",
                                                 color=color)
     bottom = alt.layer(s_lines, s_pts, s_ends).properties(
         width=width, height=height, title=alt.Title(
             alt.ExprRef("'Puntos de ' + (piloto.driver ? piloto.driver[0] : '') + "
                         "' según cada escenario'"),
-            subtitle=[f"Realidad (blanco), modelo {model_name} (azul) y grilla (naranja). "
+            subtitle=[f"Realidad (negro), modelo {model_name} (azul) y grilla (ámbar). "
                       "Punteadas: ajustadas por abandonos (los que no terminaron van al fondo, "
                       "así que no suman)."],
-            color=INK, subtitleColor=INK_MUTED, anchor="start", fontSize=15))
+            color=INK, subtitleColor=INK_MUTED, anchor="start", fontSize=17))
 
     return alt.vconcat(top, bottom, spacing=40).add_params(escenario).configure(
         background=ASPHALT, padding={"left": 20, "right": 140, "top": 16, "bottom": 16}
     ).configure_view(stroke=None, fill=ASPHALT).configure_axis(grid=True).configure_text(
-        font="sans-serif")
+        font=C.FUENTE)

@@ -11,11 +11,11 @@ valores que las capas leen.
     Mapeo:           error -> x (ordinal), cantidad -> y, predicción -> xOffset y color.
                      En el paso 3 el color pasa a ser "abandonó" para los que no terminaron.
     Escalas:         ejes fijos en todos los pasos (para que el gráfico no salte) y los colores de
-                     graficos/colores.py: azul = modelo, naranja = grilla, gris = abandono.
+                     graficos/colores.py: azul = modelo, ámbar = grilla, gris = abandono.
 
 Pasos:
     1 · La grilla       solo la grilla: la mayoría termina cerca de donde largó.
-    2 · El modelo       aparece el modelo: un poco más concentrado en el 0.
+    2 · El modelo       aparece el modelo: menos errores grandes, aunque no más aciertos exactos.
     3 · Los abandonos   (por defecto) los que no terminaron son la cola de la izquierda.
     4 · Explorá         menú de temporada y casilla para sacar los abandonos.
 """
@@ -29,6 +29,7 @@ import pandas as pd
 from graficos import colores as C
 
 TOPE = 15          # errores más grandes se acumulan en ±15
+GRANDE = 8         # «error grande» en el relato del paso 2: 8 puestos o más
 PASOS = ["1 · La grilla", "2 · El modelo", "3 · Los abandonos", "4 · Explorá"]
 
 
@@ -78,16 +79,16 @@ def grafico_pasos(pred: pd.DataFrame, test: dict, anio_test: int = 2026,
 
     # ---- parámetros: el paso (botones) y, para el paso 4, temporada y abandonos ----------------
     paso = alt.param(name="paso", value=3, bind=alt.binding_radio(
-        options=[1, 2, 3, 4], labels=PASOS, name="Paso: "))
+        options=[1, 2, 3, 4], labels=PASOS, name="Paso "))
     anios = sorted(int(a) for a in conteo["Year"].unique())
     anio = alt.param(name="anio", value=anio_test, bind=alt.binding_select(
-        options=anios, name="Temporada (paso 4): "))
+        options=anios, name="Temporada (paso 4) "))
     sin_ab = alt.param(name="sin_ab", value=False, bind=alt.binding_checkbox(
         name="Sacar los abandonos (paso 4) "))
 
     # ---- escalas fijas: el gráfico no salta al cambiar de paso ---------------------------------
-    # 30 % de aire arriba: ahí va el relato
-    y_max = float(conteo.groupby(["Year", "quien", "error_bin"])["pilotos"].sum().max()) * 1.3
+    # 45 % de aire arriba: ahí va el relato (hasta cuatro líneas)
+    y_max = float(conteo.groupby(["Year", "quien", "error_bin"])["pilotos"].sum().max()) * 1.45
     x = alt.X("error_bin:O", title="Error de la predicción, en puestos (negativo = lo puso más adelante de lo que terminó)",
               scale=alt.Scale(domain=list(range(-TOPE, TOPE + 1))),
               axis=alt.Axis(labelAngle=0, values=list(range(-TOPE, TOPE + 1, 5)), **C.EJES))
@@ -123,18 +124,35 @@ def grafico_pasos(pred: pd.DataFrame, test: dict, anio_test: int = 2026,
     # ---- el relato: un texto por paso, como capa (sección 7.5) ---------------------------------
     t = test
     f = lambda v: f"{v:.2f}".replace(".", ",")  # noqa: E731
-    pct = 1 - t["mae_modelo_sin_abandonos"] / t["mae_modelo"]
+    # Los números del relato salen de las mismas filas que dibujan las barras (todos los pilotos
+    # del test), así un cambio en los datos no deja un texto que diga lo contrario del gráfico.
+    del_test = largo[largo["Year"] == anio_test]
+    err = {q: del_test.loc[del_test["quien"] == q, "error"].abs() for q in ["Grilla", "Modelo"]}
+    exactos = {q: int((e.round() == 0).sum()) for q, e in err.items()}
+    grandes = {q: int((e >= GRANDE).sum()) for q, e in err.items()}
+    cerca = float((err["Grilla"] <= 2).mean())
+    mas_menos = lambda a, b: "más" if a > b else "menos" if a < b else "los mismos"  # noqa: E731
+    exactos_txt, grandes_txt = (mas_menos(exactos["Modelo"], exactos["Grilla"]),
+                                mas_menos(grandes["Modelo"], grandes["Grilla"]))
+    # a favor del modelo: más exactos o menos errores grandes; si uno va a favor y el otro en
+    # contra, «pero»
+    nexo = "pero" if (exactos_txt == "más") != (grandes_txt == "menos") else "y"
     relato = pd.DataFrame([
         {"paso": 1, "linea": 0, "texto": f"Usar la largada como predicción: erra {f(t['mae_grilla'])} puestos en promedio."},
-        {"paso": 1, "linea": 1, "texto": "La mayoría termina cerca de donde largó: la grilla ya es una buena predicción."},
-        {"paso": 2, "linea": 0, "texto": f"El modelo suma clasificación, campeonato y prácticas: erra {f(t['mae_modelo'])}."},
-        {"paso": 2, "linea": 1, "texto": "Tiene más pilotos en el 0 que la grilla… pero el promedio casi no baja. ¿Por qué?"},
+        {"paso": 1, "linea": 1, "texto": f"El {cerca:.0%} termina a 2 puestos o menos de donde largó: la grilla ya predice bien."},
+        {"paso": 2, "linea": 0, "texto": f"El modelo suma clasificación, campeonato y prácticas: erra {f(t['mae_modelo'])}; "
+                                          f"la grilla, {f(t['mae_grilla'])}."},
+        {"paso": 2, "linea": 1, "texto": f"Acierta {exactos_txt} puestos exactos que la grilla ({exactos['Modelo']} contra "
+                                          f"{exactos['Grilla']}),"},
+        {"paso": 2, "linea": 2, "texto": f"{nexo} tiene {grandes_txt} errores grandes, de {GRANDE} puestos o más "
+                                          f"({grandes['Modelo']} contra {grandes['Grilla']})."},
+        {"paso": 2, "linea": 3, "texto": "Aun así, el promedio casi no baja. ¿Por qué?"},
         {"paso": 3, "linea": 0, "texto": "En gris, los que no terminaron: son la cola de la izquierda, para los dos."},
         {"paso": 3, "linea": 1, "texto": f"Sin ellos, el modelo erra {f(t['mae_modelo_sin_abandonos'])} y la grilla "
                                           f"{f(t['mae_grilla_sin_abandonos'])}: los abandonos tapaban la ventaja."},
     ])
     texto = alt.Chart(relato).transform_filter("datum.paso == paso").mark_text(
-        align="left", baseline="top", fontSize=14, color=C.INK
+        align="left", baseline="top", fontSize=16, color=C.INK
     ).transform_calculate(px="8 + datum.linea * 22").encode(
         x=alt.value(8), y=alt.Y("px:Q", scale=None), text="texto:N")
 
@@ -148,10 +166,10 @@ def grafico_pasos(pred: pd.DataFrame, test: dict, anio_test: int = 2026,
     texto4 = alt.Chart(por_anio.melt(id_vars="Year", value_vars=["l0", "l1"], var_name="l", value_name="texto")
                        ).transform_filter("paso == 4 && datum.Year == anio").transform_calculate(
         linea="datum.l == 'l0' ? 0 : 1").mark_text(
-        align="left", baseline="top", fontSize=14, color=C.INK
+        align="left", baseline="top", fontSize=16, color=C.INK
     ).transform_calculate(px="8 + datum.linea * 22").encode(
         x=alt.value(8), y=alt.Y("px:Q", scale=None), text="texto:N")
 
     return alt.layer(barras, cero, texto, texto4).add_params(paso, anio, sin_ab).properties(width=width, height=height).configure(
-        background=C.ASPHALT, padding={"left": 16, "right": 16, "top": 16, "bottom": 8}
-    ).configure_view(stroke=None, fill=C.ASPHALT).configure_text(font="sans-serif")
+        background=C.FONDO, padding={"left": 16, "right": 16, "top": 16, "bottom": 8}
+    ).configure_view(stroke=None, fill=C.FONDO).configure_text(font=C.FUENTE)

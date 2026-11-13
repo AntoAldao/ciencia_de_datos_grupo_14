@@ -29,9 +29,10 @@ ciencia_de_datos_grupo_14/
 ├── app.py                # La aplicación (Streamlit): lee app_data/ y el modelo
 ├── build_app.py          # Datos del pipeline -> notebook de la Entrega 3 -> app_data/
 ├── modelo_entrega3.py    # Clases del notebook de la Entrega 3 + cargar el modelo y predecir
-├── estilo.py             # Identidad F1: semáforo, sectores, pianos, boxes, bandera y zócalo de la vuelta
+├── estilo.py             # Look and feel F1: CSS, encabezado con escuderías y pie (solo decoración)
+├── assets/               # estilo.css, logo.svg y logos opcionales de escuderías (ver su LEEME.md)
 ├── graficos/             # Gráficos de la app (Altair)
-│   ├── colores.py        #   los colores de toda la app: cada uno significa una sola cosa
+│   ├── colores.py        #   los colores de toda la app: cada uno significa una sola cosa (aptos para daltónicos)
 │   ├── pasos.py          #   Sector 3 contado en pasos (copa de martini en un gráfico, práctica 7.9)
 │   └── panorama.py       #   Explorá: todas las carreras con vistas vinculadas (práctica 6.5)
 ├── app_data/             # Generado por build_app.py: predicciones, aportes y resumen
@@ -43,12 +44,14 @@ ciencia_de_datos_grupo_14/
 └── CONTRIBUTING.md       # Cómo trabajar con ramas
 ```
 
-El pipeline de la Entrega 1 (Airflow) vive en su propio repositorio:
-<https://github.com/Gonzalez-Matias/f1-pipeline>.
+El pipeline de la Entrega 1 (Airflow) vive en este mismo repositorio, en [`pipeline/`](pipeline/)
+(ver su README).
 
 ## Cómo correrlo
 
-Desde la carpeta del repositorio, en PowerShell:
+Desde la carpeta del repositorio, según el sistema operativo:
+
+**Windows (PowerShell):**
 
 ```powershell
 python -m venv .venv
@@ -57,6 +60,19 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
+**Linux y macOS (bash/zsh):**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+En Linux, si `python3 -m venv` falla porque falta el módulo, instalarlo primero
+(en Debian/Ubuntu: `sudo apt install python3-venv`). En macOS, si no está `python3`,
+instalarlo con `brew install python` o desde <https://www.python.org/downloads/>.
+
 Se abre en <http://localhost:8501>.
 
 ## Cómo se regenera la aplicación
@@ -64,7 +80,9 @@ Se abre en <http://localhost:8501>.
 La app no entrena nada: muestra lo que deja `build_app.py` en `app_data/` y usa el modelo que
 guarda el notebook de la Entrega 3 en `modelos/`. Si cambian los datos del pipeline:
 
-```powershell
+Con el entorno virtual activado (los comandos son iguales en Windows, Linux y macOS):
+
+```bash
 # 1. reemplazar data/f1_all_full.parquet por la nueva salida del pipeline
 python build_app.py --entrenar             # 2. ejecuta el notebook de la Entrega 3 y regenera todo
 streamlit run app.py                       # 3. mirar que esté bien, y commitear app_data/ y modelos/
