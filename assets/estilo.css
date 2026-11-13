@@ -305,13 +305,12 @@ h1 { font-style: italic; letter-spacing: -.01em; line-height: 1.1 !important; co
 [data-testid="stVegaLiteChart"] .vega-bindings:empty { display: none !important; }
 
 /* ---------- Campeonato: campeón con trofeo y ficha del piloto elegido ---------- */
-.f1-campeonato { display: grid; grid-template-columns: minmax(240px, 1fr) 2.4fr; gap: 16px; margin: 4px 0 12px; }
-@media (max-width: 900px) { .f1-campeonato { grid-template-columns: 1fr; } }
 .f1-campeon, .f1-ficha {
   background: var(--f1-panel); border: 1px solid var(--f1-borde); border-radius: 10px;
   box-shadow: var(--f1-sombra); padding: 14px 18px;
 }
-.f1-campeon { display: flex; align-items: center; gap: 14px; position: relative; overflow: hidden;
+.f1-campeon, .f1-ficha { margin: 4px 0 12px; }
+.f1-campeon { display: inline-flex; padding-right: 48px; align-items: center; gap: 14px; position: relative; overflow: hidden;
   border-top: 4px solid #C9A227; }
 .f1-campeon::after { content: ""; position: absolute; right: 0; top: 0; bottom: 0; width: 18px;
   background: var(--f1-cuadros); opacity: .85; }
@@ -322,14 +321,17 @@ h1 { font-style: italic; letter-spacing: -.01em; line-height: 1.1 !important; co
 .f1-campeon span, .f1-ficha-cabeza span { display: flex; align-items: center; gap: 8px;
   color: var(--f1-tinta-suave); font-variant-numeric: tabular-nums; margin-top: 4px; }
 .f1-logo-equipo { width: auto; max-width: 70px; object-fit: contain; font-size: .85rem; }
-.f1-ficha { border-left: 6px solid var(--equipo); display: flex; flex-wrap: wrap; align-items: center; gap: 14px 24px; }
+.f1-ficha { border-left: 6px solid var(--equipo); }
+.f1-ficha-nota { margin: 12px 0 8px; color: var(--f1-tinta-suave); font-size: .92rem; }
 .f1-ficha-cabeza { display: flex; align-items: center; gap: 14px; min-width: 220px; }
 .f1-ficha-cabeza .f1-trofeo { height: 64px; }
 .f1-puesto { flex: none; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center;
   background: var(--equipo); color: #fff; font-weight: 800; font-size: 1.35rem; font-variant-numeric: tabular-nums; }
-.f1-chips { display: flex; flex-wrap: wrap; gap: 8px; flex: 1; }
-.f1-chip { flex: 1 1 110px; background: var(--f1-papel); border: 1px solid var(--f1-linea);
+.f1-chips { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
+.f1-chip { display: flex; flex-direction: column; background: var(--f1-papel); border: 1px solid var(--f1-linea);
   border-top: 3px solid var(--escenario); border-radius: 8px; padding: 6px 10px; font-variant-numeric: tabular-nums; }
+.f1-chip small { font-weight: 700; color: var(--f1-tinta); }
+.f1-chip p { margin: 2px 0 6px; font-size: .8rem; line-height: 1.3; color: var(--f1-tinta-suave); flex: 1; }
 .f1-chip b { font-size: 1.15rem; margin-right: 6px; color: var(--f1-tinta); }
 .f1-chip span { color: var(--f1-tinta-suave); font-size: .9rem; }
 .f1-chip em { display: block; font-style: normal; font-size: .78rem; color: var(--f1-tinta-suave); }
