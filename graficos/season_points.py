@@ -97,14 +97,25 @@ def season_points(table: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def standings(points: pd.DataFrame) -> pd.DataFrame:
+    """Tabla final del campeonato en cada escenario: una fila por escenario y piloto con sus
+    puntos al terminar la temporada y el puesto (`rank`, 1 = campeón; empates, por orden)."""
+    end = points.sort_values("race").groupby(["scenario", "driver"]).tail(1)
+    end = end[["scenario", "driver", "driver_id", "team", "color", "cum_pts"]].sort_values(
+        ["scenario", "cum_pts", "driver"], ascending=[True, False, True])
+    end["rank"] = end.groupby("scenario").cumcount() + 1
+    return end.reset_index(drop=True)
+
+
 def points_chart(points: pd.DataFrame, width: int = 860, height: int = 380,
-                 model_name: str = "Ridge") -> alt.VConcatChart:
+                 model_name: str = "Ridge", driver: str | None = None) -> alt.VConcatChart:
     """Arriba: el campeonato de todos los pilotos en el escenario elegido (selector). Clic en un
-    piloto: abajo aparecen sus cinco escenarios."""
+    piloto: abajo aparecen sus cinco escenarios. `driver` (código, p. ej. "ANT") es el piloto
+    elegido al abrir el gráfico; si no se pasa, el campeón real."""
     scenarios = list(SCENARIOS)
     year = int(points["year"].max())
-    leader = (points[points["scenario"] == "Realidad"].sort_values("race")
-              .groupby("driver")["cum_pts"].last().idxmax())
+    leader = driver or (points[points["scenario"] == "Realidad"].sort_values("race")
+                        .groupby("driver")["cum_pts"].last().idxmax())
     escenario = alt.param(name="escenario", value="Realidad", bind=alt.binding_select(
         options=scenarios, name="Escenario (arriba) "))
     piloto = alt.selection_point(name="piloto", fields=["driver"], on="click", nearest=True,
@@ -142,7 +153,8 @@ def points_chart(points: pd.DataFrame, width: int = 860, height: int = 380,
             alt.ExprRef(f"'Campeonato {year} según: ' + escenario"),
             subtitle=["Puntos 25-18-15-12-10-8-6-4-2-1, solo carrera principal (sin sprints ni "
                       "vuelta rápida), con el orden de llegada del escenario elegido.",
-                      "Clic en un piloto para ver abajo sus cinco escenarios."],
+                      "Elegí un piloto en el selector (o hacé clic en su línea) para ver abajo "
+                      "sus cinco escenarios."],
             color=INK, subtitleColor=INK_MUTED, anchor="start", fontSize=17))
 
     # Abajo: el piloto elegido en los cinco escenarios.

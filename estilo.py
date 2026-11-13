@@ -121,3 +121,43 @@ def seccion(numero: int, titulo: str) -> None:
 def pie(texto_izq: str, texto_der: str) -> None:
     st.html(f'<div class="f1-pie"><span>{html.escape(texto_izq)}</span>'
             f'<span>{html.escape(texto_der)}</span></div>')
+
+
+def _equipo(team: str, alto: int = 22) -> str:
+    """Logo de la escudería (o su nombre, si no hay logo) para las tarjetas."""
+    nombre = html.escape(logos.nombre(team))
+    logo = logos.uri(team)
+    return (f'<img class="f1-logo-equipo" style="height:{alto}px" src="{logo}" alt="{nombre}" '
+            f'title="{nombre}">' if logo else f'<span class="f1-logo-equipo">{nombre}</span>')
+
+
+def campeonato(anio: int, campeon: dict, piloto: dict, escenarios: list[dict]) -> None:
+    """Cabecera de la pestaña Campeonato: el campeón real de la temporada (con el trofeo) y la
+    ficha del piloto elegido: su puesto y puntos en cada escenario (realidad, modelo, grilla).
+
+    `campeon` y `piloto`: nombre, team, pts (y piloto: color, puesto). `escenarios`: una fila
+    por escenario con nombre, puesto, pts y color (el del escenario en el gráfico)."""
+    def chip(e: dict) -> str:
+        dif = e["pts"] - piloto["pts"]
+        signo = "" if e["nombre"] == "Realidad" else (
+            f'<em class="{"mas" if dif > 0 else "menos" if dif < 0 else ""}">'
+            f'{"+" if dif > 0 else ""}{dif:g} vs. real</em>')
+        return (f'<div class="f1-chip" style="--escenario:{e["color"]}">'
+                f'<small>{html.escape(e["nombre"])}</small>'
+                f'<b>P{e["puesto"]}</b><span>{e["pts"]:g} pts</span>{signo}</div>')
+
+    trofeo = ('<img class="f1-trofeo" src="' + _data_uri(ASSETS / "trophy.jpeg", 220) + '" alt="">'
+              if piloto["puesto"] == 1 else
+              f'<div class="f1-puesto">P{piloto["puesto"]}</div>')
+    st.html(
+        f'<div class="f1-campeonato">'
+        f'<div class="f1-campeon">'
+        f'<img class="f1-trofeo" src="{_data_uri(ASSETS / "trophy.jpeg", 220)}" alt="Trofeo">'
+        f'<div><small>Campeón {anio}</small><b>{html.escape(campeon["nombre"])}</b>'
+        f'<span>{_equipo(campeon["team"])}{campeon["pts"]:g} pts</span></div></div>'
+        f'<div class="f1-ficha" style="--equipo:{piloto["color"]}">'
+        f'<div class="f1-ficha-cabeza">{trofeo}<div><small>Piloto elegido</small>'
+        f'<b>{html.escape(piloto["nombre"])}</b>'
+        f'<span>{_equipo(piloto["team"])}{piloto["pts"]:g} pts reales</span></div></div>'
+        f'<div class="f1-chips">{"".join(chip(e) for e in escenarios)}</div></div>'
+        f'</div>')

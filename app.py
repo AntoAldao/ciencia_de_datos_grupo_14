@@ -369,8 +369,28 @@ with sub_error:
     st.altair_chart(race_errors.errors_chart(race_errors.race_errors(tabla),
                                              model_name=nombre_modelo, width=980), theme=None)
 with sub_campeonato:
-    st.altair_chart(season_points.points_chart(season_points.season_points(tabla),
-                                               model_name=nombre_modelo, width=980), theme=None)
+    puntos = season_points.season_points(tabla)
+    final = season_points.standings(puntos)
+    real = final[final["scenario"] == "Realidad"].set_index("driver")
+    nombre_piloto = lambda d: real.loc[d, "driver_id"].replace("_", " ").title()  # noqa: E731
+    elegido = st.selectbox(
+        "Piloto", real.index.tolist(), key=f"campeonato-{anio}",
+        format_func=lambda d: f"P{real.loc[d, 'rank']} · {nombre_piloto(d)} ({d}) · "
+                              f"{real.loc[d, 'cum_pts']:g} pts")
+    campeon = real.index[0]
+    estilo.campeonato(
+        anio,
+        campeon={"nombre": nombre_piloto(campeon), "team": real.loc[campeon, "team"],
+                 "pts": real.loc[campeon, "cum_pts"]},
+        piloto={"nombre": nombre_piloto(elegido), "team": real.loc[elegido, "team"],
+                "color": real.loc[elegido, "color"], "puesto": int(real.loc[elegido, "rank"]),
+                "pts": real.loc[elegido, "cum_pts"]},
+        escenarios=[{"nombre": e, "color": season_points.SCENARIO_COLORS[e],
+                     "puesto": int(f["rank"].iloc[0]), "pts": f["cum_pts"].iloc[0]}
+                    for e in season_points.SCENARIOS
+                    for f in [final[(final["scenario"] == e) & (final["driver"] == elegido)]]])
+    st.altair_chart(season_points.points_chart(puntos, model_name=nombre_modelo, width=980,
+                                               driver=elegido), theme=None)
 with sub_autos:
     # HTML propio: lleva el botón «Correr» que anima la carrera.
     st.iframe(race_cars.to_html(race_cars.race_cars_compare(
