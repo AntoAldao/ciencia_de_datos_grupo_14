@@ -32,7 +32,7 @@
   font-size: 1rem !important; color: var(--f1-tinta-suave) !important;
 }
 
-/* ---------- Menú lateral: el objetivo, lo que encontramos y explorá por tu cuenta ---------- */
+/* ---------- Menú lateral: el objetivo, el recorrido y explorá por tu cuenta ---------- */
 [data-testid="stSidebar"] { border-right: 1px solid var(--f1-borde); }
 .f1-nav { display: flex; flex-direction: column; gap: 4px; padding-top: 4px; }
 .f1-nav a { text-decoration: none !important; color: var(--f1-tinta) !important; }
@@ -48,7 +48,7 @@
   color: var(--f1-rojo);
 }
 .f1-nav-parte span { font-size: .85rem; color: var(--f1-tinta-suave); }
-/* Lo que encontramos: una línea que une los sectores (se lee en orden); explorá: un panel aparte */
+/* El recorrido: una línea que une los sectores (se lee en orden); explorá: un panel aparte */
 .f1-nav-grupo { position: relative; margin-left: 22px; padding-left: 12px; border-left: 3px solid var(--f1-borde); }
 .f1-nav-grupo.explorar {
   margin-left: 6px; padding: 6px;
