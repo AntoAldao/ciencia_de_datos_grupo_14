@@ -369,8 +369,54 @@ with sub_error:
     st.altair_chart(race_errors.errors_chart(race_errors.race_errors(tabla),
                                              model_name=nombre_modelo, width=980), theme=None)
 with sub_campeonato:
-    st.altair_chart(season_points.points_chart(season_points.season_points(tabla),
-                                               model_name=nombre_modelo, width=980), theme=None)
+    puntos = season_points.season_points(tabla)
+    final = season_points.standings(puntos)
+    real = final[final["scenario"] == "Realidad"].set_index("driver")
+    nombre_piloto = lambda d: real.loc[d, "driver_id"].replace("_", " ").title()  # noqa: E731
+    # Primero la temporada completa (todos los pilotos), después un piloto a elección. El
+    # selector se dibuja abajo, pero su valor se lee antes para resaltar la línea de arriba.
+    clave_piloto, clave_grafico = f"campeonato-{anio}", f"campeonato-grafico-{anio}"
+    if st.session_state.get(clave_piloto) not in real.index:
+        st.session_state[clave_piloto] = real.index[0]
+    # Un clic en una línea o en un nombre del gráfico elige a ese piloto en el selector (solo
+    # si el clic es nuevo: así no pisa lo que se elija después en el selector).
+    evento = st.session_state.get(clave_grafico)
+    clics = {n: tuple(d.get("driver") for d in (evento.selection.get(n) or []))
+             for n in season_points.CLICK_PARAMS} if evento else {}
+    anteriores = st.session_state.get(f"{clave_grafico}-vistos", {})
+    for n, pilotos in clics.items():
+        if pilotos and pilotos != anteriores.get(n) and pilotos[0] in real.index:
+            st.session_state[clave_piloto] = pilotos[0]
+    st.session_state[f"{clave_grafico}-vistos"] = clics
+    campeon = real.index[0]
+    estilo.campeon(anio, nombre_piloto(campeon), real.loc[campeon, "team"],
+                   real.loc[campeon, "cum_pts"])
+    grafico_temporada = st.empty()
+
+    st.markdown("#### Un piloto en los cinco escenarios")
+    st.caption("Elegí un piloto: la ficha y el gráfico de abajo muestran cuántos puntos habría "
+               "sumado si las carreras hubieran terminado como dice cada escenario, y su línea "
+               "queda resaltada en el gráfico de arriba (ahí también podés elegirlo con un "
+               "clic en su línea o en su nombre).")
+    elegido = st.selectbox(
+        "Piloto", real.index.tolist(), key=clave_piloto,
+        format_func=lambda d: f"P{real.loc[d, 'rank']} · {nombre_piloto(d)} ({d}) · "
+                              f"{real.loc[d, 'cum_pts']:g} pts")
+    grafico_temporada.altair_chart(
+        season_points.season_chart(puntos, width=980, driver=elegido), theme=None,
+        width="content",
+        key=clave_grafico, on_select="rerun", selection_mode=season_points.CLICK_PARAMS)
+    estilo.ficha_piloto(
+        {"nombre": nombre_piloto(elegido), "team": real.loc[elegido, "team"],
+         "color": real.loc[elegido, "color"], "puesto": int(real.loc[elegido, "rank"]),
+         "pts": real.loc[elegido, "cum_pts"]},
+        [{"nombre": e, "desc": season_points.SCENARIO_DESC[e],
+          "color": season_points.SCENARIO_COLORS[e],
+          "puesto": int(f["rank"].iloc[0]), "pts": f["cum_pts"].iloc[0]}
+         for e in season_points.SCENARIOS
+         for f in [final[(final["scenario"] == e) & (final["driver"] == elegido)]]])
+    st.altair_chart(season_points.driver_chart(puntos, elegido, model_name=nombre_modelo,
+                                               width=980), theme=None, width="content")
 with sub_autos:
     # HTML propio: lleva el botón «Correr» que anima la carrera.
     st.iframe(race_cars.to_html(race_cars.race_cars_compare(
