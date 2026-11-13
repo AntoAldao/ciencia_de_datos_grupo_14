@@ -3,6 +3,8 @@
 Proyecto integrador de Ciencia de Datos (UTN FRM, 2026). Trabajamos con datos de Fórmula 1
 (2018–2026): una fila es **un piloto en un Gran Premio**.
 
+**Aplicación publicada:** <https://ciencia-de-datos-grupo14-2026.streamlit.app/>
+
 ## Objetivo
 
 La **Entrega 4** es la versión final del proyecto: una aplicación web publicada en una URL que cuenta

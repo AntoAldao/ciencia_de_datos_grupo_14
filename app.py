@@ -19,6 +19,9 @@ from graficos import model_moves, panorama, pasos, race_cars, race_errors, seaso
 
 APP_DATA = Path(__file__).resolve().parent / "app_data"
 ANIO_TEST = 2026   # lo único que el modelo no vio al entrenar (2018-2025)
+# Cuándo entró al repositorio la salida del pipeline (data/f1_all_full.parquet). Actualizar si se
+# reemplaza el archivo.
+FECHA_DATOS = "11/11/2026"
 # El pipeline de la Entrega 1 vive en este mismo repositorio, en pipeline/.
 PIPELINE = "https://github.com/AntoAldao/ciencia_de_datos_grupo_14/tree/main/pipeline"
 
@@ -66,6 +69,18 @@ def tabla_nb(comienzo: str) -> pd.DataFrame:
     filas = [[""] * (ancho - len(f)) + f for f in t["filas"]]   # índices de dos niveles
     tabla = pd.DataFrame(filas, columns=[c or " " for c in t["columnas"]])
     return tabla.set_index(tabla.columns[0])
+
+
+def tabla_tramos() -> pd.DataFrame:
+    """«Error por tramo» del notebook: tiene dos niveles de índice (corte y franja), así que se
+    arma aparte, repitiendo el corte en cada fila."""
+    titulo = next(t for t in notebook if t.startswith("Error por tramo"))
+    filas, corte = [], ""
+    for f in notebook[titulo]["filas"][1:]:   # la primera fila son los nombres del índice
+        if len(f) == 5:
+            corte, f = f[0], f[1:]
+        filas.append([corte, *f])
+    return pd.DataFrame(filas, columns=["Corte", "Franja", "Pilotos", "MAE", "Sesgo"])
 
 
 def fmt(x: float, decimales: int = 2) -> str:
@@ -146,7 +161,7 @@ with st.expander("Cómo lo sabemos"):
         "campeonato) y la telemetría de FastF1 (prácticas libres): "
         f"{filas_crudas_txt} filas, una por piloto en cada Gran Premio, "
         f"de {int(df['Year'].min())} a {int(df['Year'].max())}, con corte en la "
-        f"{corte_fecha} de {corte_anio}. El respaldo es el archivo "
+        f"{corte_fecha} de {corte_anio} (datos del {FECHA_DATOS}). El respaldo es el archivo "
         f"{archivo_datos}, guardado en el repositorio; "
         "build_app.py lo lee de ahí."
     )
@@ -234,7 +249,10 @@ with st.expander("Cómo lo sabemos"):
         "**Qué medimos.** El error absoluto medio (MAE) indica cuántos "
         "puestos nos equivocamos en promedio, después de ordenar "
         "a los pilotos de cada carrera. Predecir quinto y terminar "
-        "tercero suma dos puestos de error. Menor es mejor."
+        "tercero suma dos puestos de error. Menor es mejor. Lo elegimos "
+        "porque se lee directo en puestos, y porque no eleva al cuadrado los "
+        "errores: un abandono que cae del 3.º al 20.º no tapa todo lo demás, "
+        "como pasaría con el RMSE."
     )
 
     st.markdown(
@@ -269,6 +287,18 @@ with st.expander("Cómo lo sabemos"):
     st.caption(f"Modelo seleccionado: {nombre_modelo}.")
 
     st.markdown(
+        "**El ajuste del elegido.** Probamos distintos valores de alpha "
+        "(cuánto se achican los coeficientes) con la misma validación "
+        "por temporada. Ordenados de mejor a peor:"
+    )
+    st.dataframe(tabla_nb("Lineal (elegido)").reset_index(drop=True), hide_index=True)
+    st.caption(
+        f"Nos quedamos con el primero ({resumen['modelo']['hiperparametros'].get('modelo', '')}). "
+        "La curva es casi plana: entre los mejores la diferencia está muy por "
+        "debajo del desvío entre temporadas."
+    )
+
+    st.markdown(
         f"**Resultado en {ANIO_TEST}.** El modelo y las referencias "
         "se evalúan sobre las mismas carreras:"
     )
@@ -286,6 +316,12 @@ with st.expander("Cómo lo sabemos"):
         "tiende a ubicar algo más atrás a quienes terminan adelante "
         "y algo más adelante a quienes terminan atrás. "
         "Los abandonos se analizan en la sección siguiente."
+    )
+    st.dataframe(tabla_tramos(), hide_index=True)
+    st.caption(
+        "Test 2026. Sesgo = puesto predicho − puesto real: positivo, lo pone "
+        "más atrás de donde terminó; negativo, más adelante. El error más "
+        "grande está en los que terminan 16.º o peor, donde caen los abandonos."
     )
 
     st.markdown(
@@ -469,5 +505,11 @@ k3.metric("Puntaje (0 = ganador, 1 = último)", fmt(despues_puntaje[i], 3))
 st.caption(f"En la realidad terminó {int(autos.loc[i, 'Puesto'])}.º"
            + (" (no terminó la carrera)" if autos.loc[i, "Terminó"] is False
               or str(autos.loc[i, "Terminó"]) == "False" else "") + ".")
+if int(autos.loc[i, "Year"]) < ANIO_TEST:
+    st.caption(f"Acá predice siempre el modelo final, entrenado con 2018-2025, que sí vio esta "
+               f"carrera. En «Explorá», en cambio, las carreras de {int(autos.loc[i, 'Year'])} las "
+               "predice un modelo entrenado sin esa temporada, así que el puesto puede diferir "
+               "en algunos lugares. Para un caso sin sesgo, elegí una carrera de "
+               f"{ANIO_TEST}.")
 
 estilo.pie("Grupo 14 · Ciencia de Datos · UTN FRM", f"Datos 2018–{ANIO_TEST}")
