@@ -404,6 +404,7 @@ with sub_campeonato:
                               f"{real.loc[d, 'cum_pts']:g} pts")
     grafico_temporada.altair_chart(
         season_points.season_chart(puntos, width=980, driver=elegido), theme=None,
+        width="content",
         key=clave_grafico, on_select="rerun", selection_mode=season_points.CLICK_PARAMS)
     estilo.ficha_piloto(
         {"nombre": nombre_piloto(elegido), "team": real.loc[elegido, "team"],
@@ -415,7 +416,7 @@ with sub_campeonato:
          for e in season_points.SCENARIOS
          for f in [final[(final["scenario"] == e) & (final["driver"] == elegido)]]])
     st.altair_chart(season_points.driver_chart(puntos, elegido, model_name=nombre_modelo,
-                                               width=980), theme=None)
+                                               width=980), theme=None, width="content")
 with sub_autos:
     # HTML propio: lleva el botón «Correr» que anima la carrera.
     st.iframe(race_cars.to_html(race_cars.race_cars_compare(
