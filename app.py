@@ -169,37 +169,78 @@ st.write("Recorré los pasos con los botones de arriba del gráfico. Cada barra 
          "contar.")
 with st.expander("Cómo lo sabemos"):
     st.markdown(
-        "- **Métrica: MAE en puestos**, después de ordenar a los pilotos dentro de cada GP: "
-        "«en promedio, el puesto predicho está a X puestos del real». Trata igual a todos los "
-        "errores y está en la misma unidad que la grilla, así que se pueden comparar.\n"
-        "- **El piso:** un modelo que pone a todos en la mitad de la tabla (`DummyRegressor`). "
-        "La referencia que importa es **la grilla sola**: el puesto predicho es el de largada.\n"
-        "- **Cómo se validó:** validación cruzada por temporada: cada temporada de 2020 a 2025 "
-        "se valida entrenando con todas las demás, así cada GP queda entero de un lado. El "
-        "modelo final se entrena con 2018-2025 y se mide una sola vez en 2026.")
-    st.dataframe(tabla_nb("Partición"))
-    st.dataframe(tabla_nb("Piso y referencia"))
-    st.markdown("**Comparación de modelos** (media y desvío de la validación cruzada; cada uno "
-                "con sus mejores hiperparámetros). Ninguno le gana al lineal por más que el "
-                "desvío, así que se elige el más simple:")
-    st.dataframe(tabla_nb("Todos los modelos ajustados"))
-    st.markdown(f"**Ajuste del elegido** ({nombre_modelo} → Ridge): la penalización `alpha`:")
-    st.dataframe(tabla_nb("Lineal (elegido)"))
-    st.markdown(f"**Resultado en el test ({ANIO_TEST})**, medido una sola vez:")
-    st.dataframe(tabla_nb("Test 2026 ("))
-    st.markdown("**Dónde se equivoca** (con todos los pilotos): adelante los pone algo atrás "
-                "y atrás algo adelante:")
-    st.dataframe(tabla_nb("Error por tramo"))
-    st.markdown("**En qué se apoya:** los coeficientes (columnas escaladas; positivo = empuja "
-                "hacia atrás). Pesan la grilla, la distancia al líder y la clasificación:")
-    st.dataframe(tabla_nb("Coeficientes del modelo final"))
+        "**Qué medimos.** El error absoluto medio (MAE) indica cuántos "
+        "puestos nos equivocamos en promedio, después de ordenar "
+        "a los pilotos de cada carrera. Predecir quinto y terminar "
+        "tercero suma dos puestos de error. Menor es mejor."
+    )
+
     st.markdown(
-        "- **Columnas descartadas por fuga:** todo lo que se conoce después de la carrera "
-        "(`RACE_Finished`, `RACE_Status`, `RACE_Laps_Down`, `RACE_Lapped`, `RACE_DNF_Type`, las "
-        "sanciones) nunca entra al modelo; si terminó o no se usa solo para medir. Las columnas "
-        "`_Before` se calculan con el campeonato previo a la fecha.\n\n"
-        "**Chequeo de fuga** en las columnas que más pesan:")
-    st.dataframe(tabla_nb("Chequeo de fuga"))
+        "**Las referencias.** El piso es una predicción básica que "
+        "ubica a todos en la mitad de la clasificación. La referencia "
+        "más exigente es la grilla: predecir el orden de llegada "
+        "usando únicamente el orden de largada."
+    )
+
+    st.markdown(
+        "**Cómo validamos.** Evaluamos cada temporada de 2020 a 2025 "
+        "entrenando con las otras temporadas de 2018–2025, sin dividir "
+        "una misma carrera entre entrenamiento y validación. "
+        "Elegimos el modelo y su ajuste con esas pruebas. "
+        "Luego entrenamos con 2018–2025 y evaluamos en 2026, "
+        "reservado como test."
+    )
+
+    st.caption(
+        "Limitación: esta validación puede entrenar con temporadas "
+        "posteriores a la evaluada. El test de 2026 sí utiliza "
+        "únicamente temporadas anteriores para entrenar."
+    )
+
+    st.markdown(
+        "**Comparación de modelos.** La media resume el error entre "
+        "temporadas y el desvío muestra cuánto varía. Elegimos el modelo "
+        "lineal por su sencillez y su rendimiento competitivo."
+    )
+    st.dataframe(tabla_nb("Todos los modelos ajustados"))
+
+    st.caption(f"Modelo seleccionado: {nombre_modelo}.")
+
+    st.markdown(
+        f"**Resultado en {ANIO_TEST}.** El modelo y las referencias "
+        "se evalúan sobre las mismas carreras:"
+    )
+    st.dataframe(tabla_nb("Test 2026 ("))
+
+    st.caption(
+        "En la evaluación «sin abandonos» se seleccionan quienes "
+        "terminaron y se vuelve a ordenar tanto sus predicciones "
+        "como sus resultados dentro de cada carrera. No supone "
+        "que sepamos de antemano quién va a terminar."
+    )
+
+    st.markdown(
+        "**Dónde se equivoca.** Con todos los pilotos incluidos, "
+        "tiende a ubicar algo más atrás a quienes terminan adelante "
+        "y algo más adelante a quienes terminan atrás. "
+        "Los abandonos se analizan en la sección siguiente."
+    )
+
+    st.markdown(
+        "**En qué se apoya.** Estos pesos muestran cómo cada entrada "
+        "contribuye al puntaje que usamos para ordenar a los pilotos. "
+        "Un peso positivo aumenta ese puntaje y tiende a ubicarlos "
+        "más atrás; uno negativo, más adelante, manteniendo "
+        "las demás entradas iguales."
+    )
+    st.dataframe(tabla_nb("Coeficientes del modelo final"))
+
+
+    st.caption(
+        "Los pesos corresponden a variables transformadas y escaladas: "
+        "no son puestos ganados o perdidos por cada unidad original "
+        "ni demuestran una relación causal."
+    )
 
 # ---- Sector 3: el límite ------------------------------------------------------------------
 estilo.seccion(3, f"Pero uno de cada {round(1 / pct_dnf)} pilotos no termina, nadie lo ve venir, "
@@ -213,14 +254,28 @@ st.write(f"El {pct_dnf:.0%} de no terminados se repite todas las temporadas: es 
          f"carrera no se pueden anticipar (AUC {auc_abandonos}; 0,5 es adivinar), así que esta "
          "parte del error no la baja ningún modelo con estos datos.")
 with st.expander("Cómo lo sabemos"):
-    st.markdown("**Peso de los abandonos** en el error del test: pocas filas que explican una "
-                "parte grande del error:")
+    st.markdown(
+        "**Cuánto pesan en el error.** Separamos a quienes terminaron "
+        "de quienes no terminaron y sumamos sus errores absolutos. "
+        "La tabla compara cuántos registros representan y qué parte "
+        "del error total concentran en el test."
+    )
     st.dataframe(tabla_nb("Peso de los abandonos"))
-    st.markdown("**Anticipar los abandonos** con las columnas previas a la carrera (un "
-                "clasificador aparte, validado por temporada): el AUC queda cerca de 0,5, que es "
-                "adivinar:")
+
+    st.markdown(
+        "**¿Podíamos anticiparlos?** Probamos un clasificador adicional "
+        "con datos previos a la carrera y lo evaluamos por temporadas. "
+        "Usamos el área bajo la curva ROC (AUC), que mide su capacidad "
+        "para distinguir quién termina y quién no: 0,5 equivale "
+        "a ordenar al azar y 1 a distinguirlos perfectamente."
+    )
     st.dataframe(tabla_nb("Anticipar abandonos"))
 
+    st.markdown(
+        f"**Conclusión.** El AUC promedio fue **{auc_abandonos}**: "
+        "el clasificador probado mostró poca capacidad para anticipar "
+        "los abandonos. Son una limitación de nuestro enfoque."
+    )
 st.divider()
 
 # ----------------------------------------------------------------------------------------------
