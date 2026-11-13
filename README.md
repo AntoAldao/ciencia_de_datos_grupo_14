@@ -33,7 +33,7 @@ ciencia_de_datos_grupo_14/
 ├── assets/               # estilo.css, logo.svg y logos opcionales de escuderías (ver su LEEME.md)
 ├── graficos/             # Gráficos de la app (Altair)
 │   ├── colores.py        #   los colores de toda la app: cada uno significa una sola cosa (aptos para daltónicos)
-│   ├── pasos.py          #   Sector 3 contado en pasos (copa de martini en un gráfico, práctica 7.9)
+│   ├── pasos.py          #   Sector 2 contado en pasos (copa de martini en un gráfico, práctica 7.9)
 │   └── panorama.py       #   Explorá: todas las carreras con vistas vinculadas (práctica 6.5)
 ├── app_data/             # Generado por build_app.py: predicciones, aportes y resumen
 ├── modelos/              # Modelo que guarda el notebook de la Entrega 3 (joblib)

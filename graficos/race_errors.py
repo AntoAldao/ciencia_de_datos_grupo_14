@@ -6,9 +6,9 @@ Tres paneles alineados por fecha:
 2. Diferencia `MAE grilla − MAE modelo` (▲ verde = el modelo acertó mejor; ▼ vino = peor).
 3. Cuántos pilotos no terminaron esa carrera (con sus siglas en el tooltip).
 
-Una casilla cambia a la versión ajustada por abandonos (los que no terminaron van al fondo, en el
-orden en que abandonaron; ver `race_cars.race_table`), para ver si el modelo pierde por los
-abandonos o por otra cosa.
+Una casilla cambia al error sin abandonos (solo los que terminaron, la misma cuenta que los
+títulos de la app; ver `race_cars.race_table`), para ver si el modelo pierde por los abandonos o
+por otra cosa.
 
 Uso:
 
@@ -33,7 +33,7 @@ DNF_COLOR = C.ABANDONO
 
 
 def race_errors(table: pd.DataFrame) -> pd.DataFrame:
-    """Una fila por carrera: MAE del modelo y de la grilla (original y ajustado por abandonos),
+    """Una fila por carrera: MAE del modelo y de la grilla (con todos y sin abandonos),
     cantidad de pilotos y de no terminados. `table` es la salida de `race_cars.race_table`."""
     g = table.groupby(["race", "race_label"])
     out = g.agg(mae_model=("mae_model", "first"), mae_grid=("mae_grid", "first"),
@@ -50,7 +50,7 @@ def errors_chart(errors: pd.DataFrame, width: int = 860,
                  model_name: str = "Ridge") -> alt.VConcatChart:
     """Paneles de MAE por carrera, diferencia y abandonos, con casilla para el ajuste."""
     ajuste = alt.param(name="ajuste", value=False,
-                       bind=alt.binding_checkbox(name="Ajustar por abandonos "))
+                       bind=alt.binding_checkbox(name="Sin abandonos "))
     axis = dict(labelColor=INK_MUTED, titleColor=INK_MUTED, gridColor=LANE, domainColor=LANE,
                 tickColor=LANE)
     n_rounds = int(errors["round"].max())
@@ -59,6 +59,9 @@ def errors_chart(errors: pd.DataFrame, width: int = 860,
     base = alt.Chart(errors).transform_calculate(
         m="ajuste ? datum.mae_adj : datum.mae_model",
         g="ajuste ? datum.mae_grid_adj : datum.mae_grid",
+        # peso de la carrera en el promedio: pilotos que cuentan (así es el promedio por piloto,
+        # igual que los títulos, y no el promedio de las carreras)
+        w="ajuste ? datum.n - datum.dnf : datum.n",
     ).transform_calculate(
         diff="datum.g - datum.m",
         tone="datum.g - datum.m > 0 ? 'mejor' : datum.g - datum.m < 0 ? 'peor' : 'igual'",
@@ -86,7 +89,9 @@ def errors_chart(errors: pd.DataFrame, width: int = 860,
         x=x, y=y_mae, color=who, tooltip=tooltip)
     model_dots = long.transform_filter("datum.who == 'm'").mark_circle(
         size=55, opacity=1).encode(x=x, y=y_mae, color=who, tooltip=tooltip)
-    means = long.transform_aggregate(mae="mean(mae)", groupby=["who_label"])
+    means = long.transform_calculate(mw="datum.mae * datum.w").transform_aggregate(
+        s="sum(mw)", sw="sum(w)", groupby=["who_label"]).transform_calculate(
+        mae="datum.s / datum.sw")
     mean_lines = means.mark_rule(strokeDash=[4, 4], strokeWidth=1.5).encode(
         y="mae:Q", color=who)
     # etiquetas de los promedios: el más alto un poco arriba, el otro un poco abajo
@@ -99,11 +104,11 @@ def errors_chart(errors: pd.DataFrame, width: int = 860,
     p1 = alt.layer(rule, mean_lines, grid_dots, model_dots, mean_txt).properties(
         width=width, height=240, title=alt.Title(
             alt.ExprRef("'Error por carrera: modelo vs. grilla' + "
-                        "(ajuste ? ' (ajustado por abandonos)' : '')"),
+                        "(ajuste ? ' (sin abandonos)' : '')"),
             subtitle=["MAE = cuántos puestos se equivoca en promedio con cada piloto (menos es "
                       "mejor). La grilla es usar la largada como predicción.",
                       "Modelo: punto azul; grilla: anillo ámbar (si empatan se ven los dos). "
-                      "Líneas punteadas: promedio de la temporada."],
+                      "Líneas punteadas: promedio por piloto de la temporada."],
             color=INK, subtitleColor=INK_MUTED, anchor="start", fontSize=17))
 
     # 2. Diferencia: positivo = el modelo acertó mejor que la grilla.

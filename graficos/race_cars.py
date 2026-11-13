@@ -167,6 +167,8 @@ def race_table(df: pd.DataFrame, stretch: bool = False,
     visualizar): los que no terminaron (`RACE_Finished == 0`) chocan en el avance
     `crash_s = 1 − RACE_Laps_Down / race_laps` (máx. `CRASH_MAX`), salen del orden y quedan al
     fondo (el que abandonó antes, más abajo); los que terminaron se ordenan por puntaje.
+    `mae_adj`/`mae_grid_adj` = MAE **sin abandonos**: solo los que terminaron (como `medir` en
+    build_app.py), así el promedio de la temporada coincide con los números de los títulos.
     """
     df = df.copy()
     keys = [df[c] for c in RACE_COLS]
@@ -214,9 +216,21 @@ def race_table(df: pd.DataFrame, stretch: bool = False,
     df["gap_adj"] = df[fin].groupby(RACE_COLS)["score"].diff()
 
     # 6. Error por carrera del modelo y de "la grilla como predicción", para comparar.
-    for col, pred in [("mae_model", "pred_pos"), ("mae_grid", "grid"),
-                      ("mae_adj", "pred_adj"), ("mae_grid_adj", "grid_adj")]:
-        df[col] = (df[pred] - df["final"]).abs().groupby(keys).transform("mean")
+    # Para medir, la grilla empatada (varios que largan desde boxes figuran con la misma
+    # posición) va con el puesto promedio, como en `medir`; `grid` (entero, desempatado por orden
+    # de fila) queda solo para dibujar.
+    grid_raw = df["Q_GridPosition"].fillna(21)
+    grid_avg = grid_raw.groupby(keys).rank(method="average")
+    grid_avg_fin = grid_raw[fin].groupby([df.loc[fin, c] for c in RACE_COLS]).rank(method="average")
+    for col, pred in [("mae_model", df["pred_pos"]), ("mae_grid", grid_avg)]:
+        df[col] = (pred - df["final"]).abs().groupby(keys).transform("mean")
+    # Sin abandonos: la misma cuenta que `medir` en build_app.py (y el notebook), para que cuadre
+    # con los títulos. Solo los que terminaron, con el resultado real reordenado 1..n entre ellos.
+    # No se usa `pred_adj`/`grid_adj` sobre todos: los abandonados quedan al fondo en su orden
+    # real de abandono, así que su error es ~0 y achica el promedio sin que el modelo acierte nada.
+    final_fin = df[fin].groupby(RACE_COLS)["final"].rank(method="average")
+    for col, pred in [("mae_adj", df["pred_adj"]), ("mae_grid_adj", grid_avg_fin)]:
+        df[col] = (pred - final_fin).abs().groupby(keys).transform("mean")
 
     # 7. Color: paleta por temporada; en cada carrera el primer piloto del equipo (orden
     #    alfabético) va en el tono claro y el segundo en el oscuro.
@@ -547,7 +561,7 @@ def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, thresho
                                             fontWeight="bold", dy=-row_height * 1.0).encode(
             x=alt.X("x:Q", scale=x_scale, **no_axis), y=alt.value(0), text="label:N")
         for i, a in enumerate(head["align"])])
-    mae_lbl = ("'MAE ajustado ' + format(datum.mae_model, '.2f') + '  vs  grilla ajustada '"
+    mae_lbl = ("'MAE sin abandonos ' + format(datum.mae_model, '.2f') + '  vs  grilla '"
                if adjusted else "'MAE modelo ' + format(datum.mae_model, '.2f') + '  vs  grilla '")
     mae_lbl += (" + format(datum.mae_grid, '.2f') + '  (' + (datum.mae_model <= datum.mae_grid ? "
                 "'mejora ' : 'empeora ') + format(abs(datum.mae_grid - datum.mae_model) / "
@@ -652,7 +666,8 @@ _HTML = """<!doctype html>
 <style>
   html, body {{ background:{bg}; color:{ink}; font-family:{font}; margin:0;
                overflow:hidden; }}
-  #controles {{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:8px; }}
+  #controles {{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:14px 20px;
+                margin-bottom:14px; background:{panel}; border:1px solid {lane}; border-radius:8px; }}
   button {{ background:{panel}; color:{ink}; border:1px solid {lane}; border-radius:4px;
            padding:8px 18px; font:600 15px {font}; cursor:pointer; letter-spacing:.04em;
            text-transform:uppercase; transition:background .15s, border-color .15s; }}
@@ -661,10 +676,15 @@ _HTML = """<!doctype html>
   #play {{ background:{rojo}; border-color:{rojo}; color:#fff; font-style:italic;
           clip-path:polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); padding:6px 22px; }}
   #play:hover {{ filter:brightness(1.12); }}
-  .vega-bindings {{ display:inline-block; margin-left:12px; }}
-  .vega-bindings {{ font:16px {font}; }}
-  .vega-bindings select {{ background:{panel}; color:{ink}; border:1px solid {lane};
-                          border-radius:4px; padding:5px 8px; font:15px {font}; }}
+  #selector {{ display:inline-block; margin-left:12px; }}
+  #selector {{ font:16px {font}; color:{ink}; }}
+  /* el desplegable igual que los de la app (assets/estilo.css, «.vega-bind select») */
+  #selector select {{ appearance:none; -webkit-appearance:none; min-height:40px;
+      padding:6px 38px 6px 12px; font:16px {font}; color:{ink}; cursor:pointer;
+      background:#EAE3D6 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4' fill='none' stroke='%231F2328' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center / 14px;
+      border:1px solid #D6CCBA; border-radius:.3rem; }}
+  #selector select:focus-visible {{ outline:2px solid {rojo}; outline-offset:2px; }}
+  .vega-bind-name {{ margin-right:8px; }}
   #marco {{ overflow:hidden; }}
   #vis {{ transform-origin:top left; }}
 </style></head><body>

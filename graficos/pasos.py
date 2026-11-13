@@ -1,4 +1,4 @@
-"""Sector 3 · El modelo, contado en pasos: una copa de martini dentro de un gráfico.
+"""Sector 2 · El modelo, contado en pasos: una copa de martini dentro de un gráfico.
 
 Es la estructura de la sección 7.9 de la práctica de Altair: el paso es un PARÁMETRO atado a unos
 botones (`binding_radio`), y cada capa declara en qué paso se ve. El gráfico no cambia: cambian los
@@ -78,10 +78,10 @@ def grafico_pasos(pred: pd.DataFrame, test: dict, anio_test: int = 2026,
 
     # ---- parámetros: el paso (botones) y, para el paso 4, temporada y abandonos ----------------
     paso = alt.param(name="paso", value=3, bind=alt.binding_radio(
-        options=[1, 2, 3, 4], labels=PASOS, name="Paso: "))
+        options=[1, 2, 3, 4], labels=PASOS, name="Paso "))
     anios = sorted(int(a) for a in conteo["Year"].unique())
     anio = alt.param(name="anio", value=anio_test, bind=alt.binding_select(
-        options=anios, name="Temporada (paso 4): "))
+        options=anios, name="Temporada (paso 4) "))
     sin_ab = alt.param(name="sin_ab", value=False, bind=alt.binding_checkbox(
         name="Sacar los abandonos (paso 4) "))
 
