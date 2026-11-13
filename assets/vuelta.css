@@ -1,0 +1,189 @@
+/* La página como una vuelta al circuito (PR #5, «Identidad de F1 y recorrido»), en el tema claro.
+   Se carga después de estilo.css: donde los dos definen lo mismo (tarjetas, pestañas,
+   desplegables), manda este. Los colores salen de las variables de estilo.css (:root).
+
+   Vuelta de formación  portada: semáforo de largada y un circuito que se dibuja con un auto.
+   Sectores 1, 2 y 3    el tallo: cartel de sector y un piano rojo y blanco entre secciones.
+   Pit lane / boxes     la copa: el usuario toma el control.
+   Bandera a cuadros    el cierre.
+   Zócalo               barra fija abajo, como la de la transmisión, que se llena con el scroll. */
+
+/* ---------- base ---------- */
+[data-testid="stMainBlockContainer"] { padding-bottom: 6rem !important; }
+[data-testid="stMain"] { scroll-timeline: --vuelta y; scroll-behavior: smooth; }
+h1 { font-weight: 900 !important; letter-spacing: -0.01em; }
+
+/* ---------- números como la torre de tiempos ---------- */
+[data-testid="stMetric"] {
+  background: linear-gradient(90deg, var(--f1-panel) 0%, var(--f1-papel) 100%);
+  border: 1px solid var(--f1-borde); border-left: 5px solid var(--f1-rojo);
+  border-radius: 4px; padding: 14px 18px; box-shadow: var(--f1-sombra);
+}
+[data-testid="stMetricValue"] { font-weight: 900; }
+[data-testid="stMetricLabel"] p { font-size: .78rem !important; }
+
+/* ---------- desplegables «Cómo lo sabemos»: como la telemetría del box ---------- */
+[data-testid="stExpander"] details {
+  border: 1px solid var(--f1-borde); border-left: 3px solid var(--f1-tinta-suave);
+  background: var(--f1-panel); border-radius: 4px;
+}
+[data-testid="stExpander"] summary p { font-weight: 700; letter-spacing: .04em; }
+
+/* ---------- pestañas: como selector de cámara ---------- */
+[data-testid="stTab"] p { text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
+
+/* ---------- semáforo de largada ---------- */
+.f1-largada { position: relative; padding: 28px 0 8px; scroll-margin-top: 80px; }
+.f1-semaforo { display: flex; gap: 14px; margin: 0 0 22px; }
+.f1-columna {
+  background: var(--f1-negro); border-radius: 10px; padding: 8px 7px;
+  display: flex; flex-direction: column; gap: 7px; box-shadow: inset 0 0 0 2px #26262F, var(--f1-sombra);
+}
+.f1-luz { width: 30px; height: 30px; border-radius: 50%; background: #2A0303; }
+.f1-luz.roja { animation: f1-prender 4.2s forwards; }
+.f1-columna:nth-child(1) .roja { animation-delay: .3s; }
+.f1-columna:nth-child(2) .roja { animation-delay: .9s; }
+.f1-columna:nth-child(3) .roja { animation-delay: 1.5s; }
+.f1-columna:nth-child(4) .roja { animation-delay: 2.1s; }
+.f1-columna:nth-child(5) .roja { animation-delay: 2.7s; }
+@keyframes f1-prender {
+  0% { background: #2A0303; box-shadow: none; }
+  3%, 92% { background: var(--f1-rojo); box-shadow: 0 0 18px 4px rgba(225, 6, 0, .6); }
+  100% { background: #2A0303; box-shadow: none; }
+}
+.f1-fuera {
+  font-weight: 900; letter-spacing: .3em; color: var(--f1-rojo); font-size: .85rem;
+  opacity: 0; animation: f1-aparecer .5s 4.4s forwards;
+}
+.f1-largada h1, .f1-largada .f1-sub, .f1-largada .f1-circuito { opacity: 0; animation: f1-subir .9s forwards; }
+.f1-largada h1 {
+  animation-delay: 4.5s; font-size: 3.1rem !important; line-height: 1.05; max-width: 22ch;
+  margin: 6px 0 14px; color: var(--f1-tinta); padding: 0 !important;
+}
+.f1-largada .f1-sub {
+  animation-delay: 4.9s; font-size: 1.3rem; font-weight: 600; color: var(--f1-tinta-suave);
+  max-width: 62ch; line-height: 1.45;
+}
+.f1-largada .f1-circuito { animation-delay: 4.2s; position: absolute; right: 0; top: 10px; width: 38%; max-width: 460px; }
+@keyframes f1-aparecer { to { opacity: 1; } }
+@keyframes f1-subir { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+
+/* el circuito se dibuja y un auto da vueltas */
+.f1-pista { fill: none; stroke: #3A3A48; stroke-width: 16; stroke-linecap: round; stroke-linejoin: round; }
+.f1-trazo {
+  fill: none; stroke: var(--f1-rojo); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 1400; stroke-dashoffset: 1400; animation: f1-dibujar 2.6s 4.4s ease-out forwards;
+}
+@keyframes f1-dibujar { to { stroke-dashoffset: 0; } }
+
+/* ---------- cartel de sector ---------- */
+.f1-sector { display: flex; align-items: stretch; margin: 10px 0 4px; scroll-margin-top: 80px; }
+.f1-sector .num {
+  background: var(--f1-rojo); color: #FFFFFF; font-weight: 900; padding: 4px 22px 4px 14px; font-size: 1.05rem;
+  clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%);
+}
+.f1-sector .nombre {
+  background: var(--f1-negro); color: #FFFFFF; font-weight: 700; padding: 4px 16px;
+  letter-spacing: .12em; text-transform: uppercase; font-size: .95rem;
+}
+.f1-sector .mini { display: flex; gap: 3px; align-items: center; padding-left: 10px; }
+.f1-sector .mini i { display: block; width: 22px; height: 6px; border-radius: 2px; background: var(--f1-borde); }
+.f1-sector .mini i.on { background: var(--c); }
+.f1-sector + div h2, .f1-titulo-sector h2 { padding-top: .3rem !important; }
+
+/* ---------- piano (kerb) entre secciones ---------- */
+.f1-kerb {
+  height: 12px; margin: 44px 0 30px; border-radius: 2px;
+  background: repeating-linear-gradient(90deg, var(--f1-rojo) 0 34px, #FFFFFF 34px 68px);
+  box-shadow: 0 0 0 1px var(--f1-borde); transform: skewX(-25deg);
+}
+
+/* ---------- pit lane ---------- */
+.f1-pit {
+  margin: 10px 0 18px; padding: 22px 26px; border-radius: 6px; position: relative; overflow: hidden;
+  background: repeating-linear-gradient(-45deg, var(--f1-panel) 0 18px, var(--f1-hueco) 18px 36px);
+  border: 1px solid var(--f1-borde); scroll-margin-top: 80px;
+}
+.f1-pit .linea {
+  position: absolute; left: 0; right: 0; bottom: 12px; height: 4px; opacity: .8;
+  background: repeating-linear-gradient(90deg, var(--f1-tinta-suave) 0 26px, transparent 26px 46px);
+}
+.f1-pit .cartel {
+  display: inline-block; background: var(--f1-negro); color: #FFFFFF; font-weight: 900;
+  padding: 2px 12px; letter-spacing: .2em; border-radius: 3px; margin-right: 12px;
+}
+.f1-pit .estado { color: var(--f1-tinta-suave); letter-spacing: .12em; font-weight: 700; font-size: .85rem; }
+.f1-pit .limite {
+  display: inline-flex; width: 46px; height: 46px; border-radius: 50%; border: 5px solid var(--f1-rojo);
+  background: #FFFFFF; color: var(--f1-tinta); font-weight: 900; align-items: center; justify-content: center;
+  float: right;
+}
+.f1-pit h2 { margin: 10px 0 4px !important; color: var(--f1-tinta); }
+.f1-pit p { color: var(--f1-tinta-suave); margin: 0 0 14px; max-width: 70ch; }
+
+/* ---------- bandera a cuadros ---------- */
+.f1-bandera {
+  margin: 40px 0 10px; border-radius: 8px; overflow: hidden; position: relative;
+  border: 1px solid var(--f1-borde); box-shadow: var(--f1-sombra); scroll-margin-top: 80px;
+}
+.f1-bandera .cuadros {
+  height: 70px; transform-origin: left center; animation: f1-flamear 2.5s ease-in-out infinite alternate;
+  background: conic-gradient(#FFFFFF 25%, var(--f1-negro) 0 50%, #FFFFFF 0 75%, var(--f1-negro) 0) 0 0 / 35px 35px;
+}
+@keyframes f1-flamear { from { transform: skewY(0deg); } to { transform: skewY(-1.5deg); } }
+.f1-bandera .texto { background: var(--f1-panel); padding: 22px 26px; color: var(--f1-tinta); line-height: 1.6; }
+.f1-bandera .texto b { font-size: 1.5rem; font-weight: 900; display: block; margin-bottom: 6px; }
+.f1-bandera .pie { color: var(--f1-tinta-suave); font-size: .9rem; }
+.f1-bandera a { color: var(--f1-rojo) !important; font-weight: 700; text-decoration: none; }
+
+/* ---------- zócalo fijo: la vuelta ---------- */
+.f1-zocalo {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 999990; height: 42px; display: flex;
+  align-items: center; background: rgba(251, 248, 242, .95); border-top: 2px solid var(--f1-rojo);
+  backdrop-filter: blur(6px); box-shadow: 0 -4px 14px rgba(60, 45, 20, .08);
+}
+.f1-zocalo .vuelta {
+  background: var(--f1-rojo); color: #FFFFFF; font-weight: 900; height: 100%; display: flex;
+  align-items: center; padding: 0 16px; letter-spacing: .12em; font-size: .85rem;
+}
+.f1-zocalo nav { display: flex; flex: 1; height: 100%; }
+.f1-zocalo nav a {
+  flex: 1; display: flex; align-items: center; justify-content: center; text-decoration: none !important;
+  color: var(--f1-tinta-suave) !important; font-weight: 700; font-size: .8rem; letter-spacing: .1em;
+  text-transform: uppercase; border-left: 1px solid var(--f1-borde);
+}
+.f1-zocalo nav a:hover { color: var(--f1-tinta) !important; background: var(--f1-hueco); }
+.f1-zocalo nav a:focus-visible { outline: 2px solid var(--f1-rojo); outline-offset: -2px; }
+.f1-progreso {
+  position: absolute; left: 0; top: -2px; height: 2px; width: 100%; background: var(--f1-negro);
+  transform-origin: left; transform: scaleX(0);
+}
+
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .f1-progreso { animation: f1-llenar linear both; animation-timeline: --vuelta; }
+    @keyframes f1-llenar { to { transform: scaleX(1); } }
+    /* cada bloque entra a pista cuando aparece en pantalla */
+    [data-testid="stMainBlockContainer"] [data-testid="stVerticalBlock"] > [data-testid="stElementContainer"]:not(:has(.f1-zocalo, .f1-largada, style)),
+    [data-testid="stMainBlockContainer"] [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"],
+    [data-testid="stMainBlockContainer"] [data-testid="stVerticalBlock"] > [data-testid="stExpander"] {
+      animation: f1-entrar linear both; animation-timeline: view(); animation-range: entry 0% entry 40%;
+    }
+    @keyframes f1-entrar { from { opacity: 0; transform: translateX(-40px); } to { opacity: 1; transform: none; } }
+    .f1-kerb { animation: f1-kerb linear both; animation-timeline: view(); animation-range: entry 0% cover 40%; }
+    @keyframes f1-kerb { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+  }
+}
+/* Con «reducir movimiento» se saca lo que se MUEVE, pero el semáforo se enciende igual: es un
+   cambio de color, no un movimiento. */
+@media (prefers-reduced-motion: reduce) {
+  .f1-largada h1, .f1-largada .f1-sub, .f1-largada .f1-circuito { animation-name: f1-aparecer !important; }
+  .f1-trazo { animation: none !important; stroke-dashoffset: 0 !important; }
+  .f1-bandera .cuadros { animation: none !important; }
+}
+@media (max-width: 900px) {
+  .f1-largada .f1-circuito { display: none; }
+  .f1-largada h1 { font-size: 2.2rem !important; }
+  .f1-zocalo nav a { font-size: .68rem; letter-spacing: .04em; }
+  .f1-zocalo .vuelta { display: none; }
+}
