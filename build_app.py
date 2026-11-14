@@ -1,4 +1,4 @@
-"""Construye lo que muestra la aplicación a partir de los datos del pipeline y del modelo.
+"""Construye la aplicación a partir de los datos del pipeline y del modelo.
 
     python build_app.py              # usa el modelo guardado (si no está, lo entrena)
     python build_app.py --entrenar   # ejecuta el notebook de la Entrega 3 y regenera el modelo
@@ -9,6 +9,10 @@
    elige el modelo, lo entrena con 2018-2025 (semilla 14), lo mide en el test (2026) y lo guarda;
    el archivo se copia a `modelos/` y el notebook ejecutado queda en `build/`.
 3. Guarda en `app_data/` las predicciones, los aportes de cada variable y un resumen.
+4. Exporta el modelo a `app_data/modelo.json` (los números del pipeline, sin sklearn), rehace la
+   cuenta desde ese JSON y comprueba que da lo mismo que `modelo.predict` en todas las filas.
+   Si no coincide, corta con error.
+5. Genera `site/index.html`: la aplicación como una página estática (ver `web/pagina.py`).
 """
 
 from __future__ import annotations
@@ -28,6 +32,7 @@ from sklearn import config_context
 from sklearn.base import clone
 
 import modelo_entrega3 as m3
+from web import modelo_json, pagina
 
 RAIZ = Path(__file__).resolve().parent
 DATOS = RAIZ / "data" / "f1_all_full.parquet"
@@ -231,11 +236,20 @@ def construir(entrenar: bool = False) -> dict:
     if (SALIDA / "notebook.json").exists():
         verificar_contra_notebook(resumen["test"],
                                   json.loads((SALIDA / "notebook.json").read_text(encoding="utf-8")))
+
+    # El modelo para el navegador («Probá el modelo» de la página estática). Primero se verifica
+    # y recién después se escribe: si la cuenta no coincide, no queda un JSON equivocado.
+    params = modelo_json.parametros(guardado)
+    resumen["verificacion"] = {"numpy": modelo_json.verificar(params, guardado, df),
+                               "js": modelo_json.verificar_js(params, guardado, df)}
+    (SALIDA / "modelo.json").write_text(json.dumps(params, indent=2, ensure_ascii=False),
+                                        encoding="utf-8")
+    resumen["pagina"] = pagina.generar()
     return resumen
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Construye app_data/ para la aplicación.")
+    parser = argparse.ArgumentParser(description="Construye app_data/ y site/index.html.")
     parser.add_argument("--entrenar", action="store_true",
                         help="ejecutar el notebook de la Entrega 3 y regenerar el modelo")
     r = construir(parser.parse_args().entrenar)
@@ -244,3 +258,14 @@ if __name__ == "__main__":
     print(f"Test 2026 ({t['carreras']} carreras): MAE modelo {t['mae_modelo']:.3f} · grilla "
           f"{t['mae_grilla']:.3f} · piso {t['mae_piso']:.3f} · sin abandonos "
           f"{t['mae_modelo_sin_abandonos']:.3f}")
+    v = r["verificacion"]
+    print(f"Modelo en JSON (numpy) contra modelo.predict: diferencia máxima "
+          f"{v['numpy']['diferencia_maxima']:.1e} en {v['numpy']['filas']} filas "
+          f"(tolerancia {v['numpy']['tolerancia']:g}).")
+    if v["js"] is None:
+        print("Aviso: no hay node instalado; web/modelo.js no se probó contra modelo.predict.")
+    else:
+        print(f"Modelo en JavaScript (node {v['js']['node']}) contra modelo.predict: diferencia "
+              f"máxima {v['js']['diferencia_maxima']:.1e} en {v['js']['filas']} filas, "
+              f"{v['js']['puestos_distintos']} puestos distintos.")
+    print(f"Página: {r['pagina'].relative_to(RAIZ)} ({r['pagina'].stat().st_size / 1e6:.1f} MB)")

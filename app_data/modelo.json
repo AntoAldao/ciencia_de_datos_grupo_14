@@ -1,0 +1,189 @@
+{
+  "elegido": "Lineal",
+  "semilla": 14,
+  "hiperparametros": {
+    "modelo": "Ridge(alpha=1000)",
+    "modelo__alpha": "1000"
+  },
+  "entrada": [
+    "Q_GridPosition",
+    "Q_Best_seconds_DBT_%",
+    "DriverPoints_Before_DBT_%",
+    "FP_LapTime_min_SOFT_DBT_%",
+    "FP_LapTime_min_MED_DBT_%",
+    "FP_LapTime_min_HARD_DBT_%",
+    "FP_LapTime_min_SOFT_ABS",
+    "FP_LapTime_mean_SOFT_ABS",
+    "FP_LapTime_min_MED_ABS",
+    "FP_LapTime_mean_MED_ABS"
+  ],
+  "desgaste": [
+    {
+      "nombre": "FP_Desgaste_SOFT",
+      "mejor": "FP_LapTime_min_SOFT_ABS",
+      "media": "FP_LapTime_mean_SOFT_ABS"
+    },
+    {
+      "nombre": "FP_Desgaste_MED",
+      "mejor": "FP_LapTime_min_MED_ABS",
+      "media": "FP_LapTime_mean_MED_ABS"
+    }
+  ],
+  "variables": [
+    {
+      "nombre": "Q_GridPosition",
+      "tipo": "valor",
+      "origen": "Q_GridPosition",
+      "log1p": false,
+      "relleno": 21.0,
+      "media": 10.51521357519017,
+      "desvio": 5.781411995509132,
+      "coef": 0.079814053771388
+    },
+    {
+      "nombre": "Q_Best_seconds_DBT_%",
+      "tipo": "valor",
+      "origen": "Q_Best_seconds_DBT_%",
+      "log1p": true,
+      "relleno": 0.9367259020857401,
+      "media": 0.920033029292193,
+      "desvio": 0.5136258161749087,
+      "coef": 0.0354302603779879
+    },
+    {
+      "nombre": "FP_LapTime_min_SOFT_DBT_%",
+      "tipo": "valor",
+      "origen": "FP_LapTime_min_SOFT_DBT_%",
+      "log1p": true,
+      "relleno": 0.8678884807639234,
+      "media": 0.8446359027616214,
+      "desvio": 0.38659666756735483,
+      "coef": 0.015704818195526757
+    },
+    {
+      "nombre": "FP_LapTime_min_MED_DBT_%",
+      "tipo": "valor",
+      "origen": "FP_LapTime_min_MED_DBT_%",
+      "log1p": true,
+      "relleno": 0.977124726456168,
+      "media": 0.9637939164645303,
+      "desvio": 0.4332728641146989,
+      "coef": 0.01290885013008682
+    },
+    {
+      "nombre": "FP_LapTime_min_HARD_DBT_%",
+      "tipo": "valor",
+      "origen": "FP_LapTime_min_HARD_DBT_%",
+      "log1p": true,
+      "relleno": 0.9410709906364825,
+      "media": 0.9305697306703337,
+      "desvio": 0.36551027176106105,
+      "coef": 0.005962456508791936
+    },
+    {
+      "nombre": "missingindicator_Q_Best_seconds_DBT_%",
+      "tipo": "faltante",
+      "origen": "Q_Best_seconds_DBT_%",
+      "media": 0.012580456407255705,
+      "desvio": 0.11145487214043559,
+      "coef": -0.003987321679485138
+    },
+    {
+      "nombre": "missingindicator_FP_LapTime_min_SOFT_DBT_%",
+      "tipo": "faltante",
+      "origen": "FP_LapTime_min_SOFT_DBT_%",
+      "media": 0.18870684610883556,
+      "desvio": 0.39127557084552544,
+      "coef": -0.0018450818774698938
+    },
+    {
+      "nombre": "missingindicator_FP_LapTime_min_MED_DBT_%",
+      "tipo": "faltante",
+      "origen": "FP_LapTime_min_MED_DBT_%",
+      "media": 0.27413692217671154,
+      "desvio": 0.44607832280462933,
+      "coef": 0.0001957333754426796
+    },
+    {
+      "nombre": "missingindicator_FP_LapTime_min_HARD_DBT_%",
+      "tipo": "faltante",
+      "origen": "FP_LapTime_min_HARD_DBT_%",
+      "media": 0.550906963136337,
+      "desvio": 0.4974017300977507,
+      "coef": 0.0009472808027003178
+    },
+    {
+      "nombre": "DriverPoints_Before_DBT_%",
+      "tipo": "valor",
+      "origen": "DriverPoints_Before_DBT_%",
+      "log1p": false,
+      "relleno": 88.76372496281999,
+      "media": 75.08352761028996,
+      "desvio": 29.214566369088125,
+      "coef": 0.06331494434623877
+    },
+    {
+      "nombre": "FP_Desgaste_SOFT",
+      "tipo": "valor",
+      "origen": "FP_Desgaste_SOFT",
+      "log1p": false,
+      "relleno": 1.4291944368073337,
+      "media": 1.7191887972672057,
+      "desvio": 1.505071257862913,
+      "coef": -0.005831874501976327
+    },
+    {
+      "nombre": "FP_Desgaste_MED",
+      "tipo": "valor",
+      "origen": "FP_Desgaste_MED",
+      "log1p": false,
+      "relleno": 1.7945493449453798,
+      "media": 1.867363199857066,
+      "desvio": 1.229931451641856,
+      "coef": -0.00346437022247845
+    },
+    {
+      "nombre": "missingindicator_DriverPoints_Before_DBT_%",
+      "tipo": "faltante",
+      "origen": "DriverPoints_Before_DBT_%",
+      "media": 0.046811000585137506,
+      "desvio": 0.21123382969911747,
+      "coef": -0.004712462807856601
+    },
+    {
+      "nombre": "missingindicator_FP_Desgaste_SOFT",
+      "tipo": "faltante",
+      "origen": "FP_Desgaste_SOFT",
+      "media": 0.18870684610883556,
+      "desvio": 0.39127557084552544,
+      "coef": -0.0018450818774698981
+    },
+    {
+      "nombre": "missingindicator_FP_Desgaste_MED",
+      "tipo": "faltante",
+      "origen": "FP_Desgaste_MED",
+      "media": 0.27413692217671154,
+      "desvio": 0.44607832280462933,
+      "coef": 0.00019573337544267645
+    },
+    {
+      "nombre": "FP_LapTime_min_SOFT_DBT_% × FP_Desgaste_SOFT",
+      "tipo": "producto",
+      "a": "FP_LapTime_min_SOFT_DBT_%",
+      "b": "FP_Desgaste_SOFT",
+      "media": 1.428721710617403,
+      "desvio": 1.542571734072239,
+      "coef": 0.007152255020915068
+    },
+    {
+      "nombre": "FP_LapTime_min_MED_DBT_% × FP_Desgaste_MED",
+      "tipo": "producto",
+      "a": "FP_LapTime_min_MED_DBT_%",
+      "b": "FP_Desgaste_MED",
+      "media": 1.7563011872880532,
+      "desvio": 1.5237053464667698,
+      "coef": 0.006842078191080487
+    }
+  ],
+  "intercepto": 0.5
+}
