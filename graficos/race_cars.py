@@ -20,13 +20,12 @@ Uso (con las predicciones que guarda `build_app.py`, columna `score`):
     from graficos import race_cars
     table = race_cars.race_table(predicciones_de_una_temporada)
     chart = race_cars.race_cars_compare(table)        # dos pistas: modelo y ajustada
-    html = race_cars.to_html(chart)                     # con botón "Correr"
+
+El botón «Correr» que anima la carrera (mueve la señal `avance`) está en `web/pagina.js`.
 """
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
 import altair as alt
 import numpy as np
 import pandas as pd
@@ -357,7 +356,7 @@ def lane_paths(table: pd.DataFrame, grid_step: float = GRID_STEP,
 def _params(table: pd.DataFrame) -> tuple[Any, Any]:
     """Slider de avance (0 → 1) y selector de carrera, compartidos por todos los paneles."""
     races = table[["race", "race_label"]].drop_duplicates().sort_values("race")
-    # sin control visible: lo mueve el botón «Correr» (ver `to_html`)
+    # sin control visible: lo mueve el botón «Correr» (ver web/pagina.js)
     avance = alt.param(name="avance", value=0.0)
     carrera = alt.param(name="carrera", value=races["race"].iloc[0], bind=alt.binding_select(
         options=races["race"].tolist(), labels=races["race_label"].tolist(), name="Carrera "))
@@ -653,86 +652,3 @@ def race_cars_compare(table: pd.DataFrame, threshold: float = 0.2, width: int = 
 
 _TITLES = {False: "Predicción del modelo",
            True: "Ajustada por abandonos (usa el resultado real)"}
-
-
-# Página con botón "Correr" que anima el slider (Vega-Lite no tiene reproducción automática).
-_HTML = """<!doctype html>
-<html lang="es"><head><meta charset="utf-8"><title>{title}</title>
-<script src="https://cdn.jsdelivr.net/npm/vega@5.30.0"></script>
-<script src="https://cdn.jsdelivr.net/npm/vega-lite@5.21.0"></script>
-<script src="https://cdn.jsdelivr.net/npm/vega-embed@6.26.0"></script>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;1,700&display=swap" rel="stylesheet">
-<style>
-  html, body {{ background:{bg}; color:{ink}; font-family:{font}; margin:0;
-               overflow:hidden; }}
-  #controles {{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:14px 20px;
-                margin-bottom:14px; background:{panel}; border:1px solid {lane}; border-radius:8px; }}
-  button {{ background:{panel}; color:{ink}; border:1px solid {lane}; border-radius:4px;
-           padding:8px 18px; font:600 15px {font}; cursor:pointer; letter-spacing:.04em;
-           text-transform:uppercase; transition:background .15s, border-color .15s; }}
-  button:hover {{ border-color:{ink}; }}
-  button:focus-visible {{ outline:2px solid {ink}; outline-offset:2px; }}
-  #play {{ background:{rojo}; border-color:{rojo}; color:#fff; font-style:italic;
-          clip-path:polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); padding:6px 22px; }}
-  #play:hover {{ filter:brightness(1.12); }}
-  #selector {{ display:inline-block; margin-left:12px; }}
-  #selector {{ font:16px {font}; color:{ink}; }}
-  /* el desplegable igual que los de la app (assets/estilo.css, «.vega-bind select») */
-  #selector select {{ appearance:none; -webkit-appearance:none; min-height:40px;
-      padding:6px 38px 6px 12px; font:16px {font}; color:{ink}; cursor:pointer;
-      background:#EAE3D6 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4' fill='none' stroke='%231F2328' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center / 14px;
-      border:1px solid #D6CCBA; border-radius:.3rem; }}
-  #selector select:focus-visible {{ outline:2px solid {rojo}; outline-offset:2px; }}
-  .vega-bind-name {{ margin-right:8px; }}
-  #marco {{ overflow:hidden; }}
-  #vis {{ transform-origin:top left; }}
-</style></head><body>
-<div id="controles"><button id="play">Correr</button>
-<button id="reset">Volver a la largada</button><span id="selector"></span></div>
-<div id="marco"><div id="vis"></div></div>
-<script>
-const spec = {spec};
-// El gráfico se achica para entrar en el ancho disponible (sin barras de desplazamiento).
-function ajustar() {{
-  const vis = document.getElementById("vis");
-  vis.style.transform = "none";
-  const escala = Math.min(1, document.body.clientWidth / vis.scrollWidth);
-  vis.style.transform = "scale(" + escala + ")";
-  document.getElementById("marco").style.height = (vis.scrollHeight * escala) + "px";
-}}
-vegaEmbed("#vis", spec, {{actions: false, bind: "#selector"}}).then(({{view}}) => {{
-  ajustar();
-  window.addEventListener("resize", ajustar);
-  const duration = {duration_ms};
-  let timer = null;
-  const stop = () => {{ clearInterval(timer); timer = null; }};
-  document.getElementById("play").onclick = () => {{
-    stop();
-    const start = Date.now();
-    timer = setInterval(() => {{
-      const t = Math.min(1, (Date.now() - start) / duration);
-      view.signal("avance", t).runAsync();
-      if (t >= 1) stop();
-    }}, 30);
-  }};
-  document.getElementById("reset").onclick = () => {{ stop(); view.signal("avance", 0).runAsync(); }};
-  view.addSignalListener("carrera", () => {{ stop(); view.signal("avance", 0).runAsync(); }});
-}});
-</script></body></html>
-"""
-
-
-def to_html(chart: alt.TopLevelMixin, duration_s: float = 6.0,
-            title: str = "Autitos F1") -> str:
-    """HTML autónomo con el gráfico y botones para correr la carrera y volver a la largada."""
-    return _HTML.format(title=title, spec=json.dumps(chart.to_dict()), bg=ASPHALT, ink=INK,
-                        lane=LANE, muted=INK_MUTED, panel=C.PANEL, rojo=C.F1_ROJO, font=C.FUENTE,
-                        duration_ms=int(duration_s * 1000))
-
-
-def save_html(chart: alt.TopLevelMixin, path: str | Path, duration_s: float = 6.0) -> Path:
-    """Guarda el HTML de `to_html` y devuelve la ruta."""
-    path = Path(path)
-    path.write_text(to_html(chart, duration_s), encoding="utf-8")
-    return path

@@ -154,7 +154,7 @@ def cargar(archivo: str | Path = ARCHIVO) -> dict:
 
 
 # Las clases del notebook necesitan DataFrames entre pasos (como `set_config` en el notebook). La
-# configuración de sklearn es por hilo y Streamlit cambia de hilo: se fija en cada llamada.
+# configuración de sklearn es por hilo: se fija en cada llamada.
 def puntaje(guardado: dict, df: pd.DataFrame) -> np.ndarray:
     """Puntaje 0-1 por fila (0 = ganador, 1 = último): lo que predice el modelo."""
     with config_context(transform_output="pandas"):

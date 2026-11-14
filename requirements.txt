@@ -1,8 +1,9 @@
-streamlit==1.67.0
 altair==6.3.0
 pandas
 pyarrow
 numpy
+# imágenes del encabezado y el menú (estilo.py)
+pillow
 # misma versión con la que el notebook guarda el modelo (joblib): si no, puede no cargar
 scikit-learn==1.9.1
 joblib

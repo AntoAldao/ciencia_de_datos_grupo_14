@@ -1,13 +1,14 @@
-"""Look and feel F1 de la app: CSS, menú lateral, encabezado, títulos de sección y pie.
+"""Look and feel F1 de la página: menú lateral, encabezado, títulos de sección y pie, como HTML.
 
-Solo decoración y navegación: no cambia ningún dato ni texto del análisis. Archivos en `assets/`:
+Solo decoración y navegación: no cambia ningún dato ni texto del análisis. Lo usa `web/pagina.py`
+para armar `site/index.html`. Archivos en `assets/`:
   estilo.css            el estilo de la interfaz (papel, piano, bandera a cuadros)
   logo.svg              logo de la Fórmula 1
   escuderias/<TeamId>   logos de cada equipo (ver assets/escuderias/LEEME.md)
   tires/                neumáticos: uno por sección del tallo (blando, medio, duro)
   circuit1..4.svg       trazados de circuitos, de marca de agua en los títulos
 
-La app es una copa de martini: el tallo (secciones 1 a 3) lo guía el autor y la copa (Explorá y
+La página es una copa de martini: el tallo (secciones 1 a 3) lo guía el autor y la copa (Explorá y
 Probá el modelo) la maneja el usuario. El menú lateral muestra esas dos partes.
 """
 from __future__ import annotations
@@ -18,7 +19,6 @@ import io
 from functools import lru_cache
 from pathlib import Path
 
-import streamlit as st
 from PIL import Image
 
 from graficos import colores as C
@@ -57,12 +57,11 @@ def _circuito(numero: int) -> str:
     return _data_uri(ASSETS / f"{CIRCUITOS.get(numero, 'circuit4')}.svg")
 
 
-def aplicar() -> None:
-    """Carga el CSS de la app."""
-    st.html(f"<style>{(ASSETS / 'estilo.css').read_text(encoding='utf-8')}</style>")
+def _color(team: str) -> str:
+    return C.ESCUDERIAS.get(team, C.ESCUDERIA_DEFECTO)
 
 
-def menu(recorrido: list[str], explorar: list[tuple[str, str, str]]) -> None:
+def menu(recorrido: list[str], explorar: list[tuple[str, str, str]]) -> str:
     """Menú lateral: el objetivo, el recorrido (los tres sectores, en orden) y las partes para
     explorar por tu cuenta. Los nombres son para el usuario, no la estructura del relato."""
     pasos_tallo = "".join(
@@ -72,8 +71,8 @@ def menu(recorrido: list[str], explorar: list[tuple[str, str, str]]) -> None:
     pasos_explorar = "".join(   # (texto, ancla, ícono): cada uno lleva a su propia sección
         f'<a class="f1-nav-item explorar" href="#{ancla}"><i>{icono}</i>'
         f'<span>{html.escape(t)}</span></a>' for t, ancla, icono in explorar)
-    st.sidebar.html(
-        f'<div class="f1-nav">'
+    return (
+        f'<nav class="f1-nav" aria-label="Índice">'
         f'<a class="f1-nav-logo" href="#portada"><img src="{_data_uri(ASSETS / "logo.svg")}" '
         f'alt="Fórmula 1"><b>Grupo 14</b></a>'
         f'<a class="f1-nav-item portada" href="#portada"><i>🏁</i><span>El objetivo</span></a>'
@@ -81,10 +80,10 @@ def menu(recorrido: list[str], explorar: list[tuple[str, str, str]]) -> None:
         f'<div class="f1-nav-grupo">{pasos_tallo}</div>'
         f'<div class="f1-nav-parte"><b>Explorá por tu cuenta</b><span>temporadas, carreras y el modelo</span></div>'
         f'<div class="f1-nav-grupo explorar">{pasos_explorar}</div>'
-        f'</div>')
+        f'</nav>')
 
 
-def encabezado(equipos: list[str], subtitulo: str) -> None:
+def encabezado(equipos: list[str], subtitulo: str) -> str:
     """Logo F1, marca del grupo y la banda de escuderías (decorativa, no se puede tocar)."""
     items = []
     for team in equipos:
@@ -93,31 +92,27 @@ def encabezado(equipos: list[str], subtitulo: str) -> None:
         dentro = (f'<img src="{logo}" alt="{html.escape(nombre)}">' if logo
                   else f'<span>{html.escape(nombre)}</span>')
         items.append(f'<div class="f1-escuderia" style="--equipo:{_color(team)}">{dentro}</div>')
-    st.html(
+    return (
         f'<div id="portada" class="f1-hero" style="--circuito:url({_circuito(4)})">'
         f'<img class="f1-hero-logo" src="{_data_uri(ASSETS / "logo.svg")}" alt="Fórmula 1">'
         f'<div class="f1-marca"><b>Grupo 14</b><span>{html.escape(subtitulo)}</span></div></div>'
         f'<div class="f1-parrilla" role="img" aria-label="Escuderías">{"".join(items)}</div>')
 
 
-def _color(team: str) -> str:
-    return C.ESCUDERIAS.get(team, C.ESCUDERIA_DEFECTO)
-
-
-def parte(id_: str, nombre: str, bajada: str) -> None:
+def parte(id_: str, nombre: str, bajada: str) -> str:
     """Rótulo que marca dónde empieza cada parte de la página (y ancla del menú)."""
-    st.html(f'<div id="{id_}" class="f1-parte"><b>{html.escape(nombre)}</b>'
+    return (f'<div id="{id_}" class="f1-parte"><b>{html.escape(nombre)}</b>'
             f'<span>{html.escape(bajada)}</span></div>')
 
 
-def seccion(numero: int, titulo: str) -> None:
+def seccion(numero: int, titulo: str) -> str:
     """Título de una sección del tallo: neumático + título + trazado de circuito de fondo."""
-    st.html(
+    return (
         f'<div id="seccion-{numero}" class="f1-seccion" style="--circuito:url({_circuito(numero)})">'
         f'<img class="f1-rueda" src="{_rueda(numero)}" alt="">'
         f'<h2>{html.escape(f"{numero}. {titulo}")}</h2></div>')
 
 
-def pie(texto_izq: str, texto_der: str) -> None:
-    st.html(f'<div class="f1-pie"><span>{html.escape(texto_izq)}</span>'
+def pie(texto_izq: str, texto_der: str) -> str:
+    return (f'<div class="f1-pie"><span>{html.escape(texto_izq)}</span>'
             f'<span>{html.escape(texto_der)}</span></div>')

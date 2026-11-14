@@ -1,6 +1,6 @@
 {
   "datos": {
-    "archivo": "data\\f1_all_full.parquet",
+    "archivo": "data/f1_all_full.parquet",
     "pasos": [
       {
         "paso": "Crudo del pipeline",
