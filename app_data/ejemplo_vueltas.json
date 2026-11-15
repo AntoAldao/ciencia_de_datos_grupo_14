@@ -1,0 +1,592 @@
+{
+ "piloto": "leclerc",
+ "gran_premio": "Gran Premio de Japón 2026",
+ "anio": 2026,
+ "ronda": 3,
+ "vueltas": [
+  {
+   "sesion": "FP1",
+   "vuelta": 1,
+   "goma": "HARD",
+   "tiempo": null,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 2,
+   "goma": "HARD",
+   "tiempo": 97.246,
+   "motivo": "Más de 5 % más lenta que su mejor con esa goma",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 3,
+   "goma": "HARD",
+   "tiempo": 94.511,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 4,
+   "goma": "HARD",
+   "tiempo": 134.235,
+   "motivo": "Más de 5 % más lenta que su mejor con esa goma",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 5,
+   "goma": "HARD",
+   "tiempo": 92.833,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 6,
+   "goma": "HARD",
+   "tiempo": 125.071,
+   "motivo": "Más de 5 % más lenta que su mejor con esa goma",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 7,
+   "goma": "HARD",
+   "tiempo": 92.26,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 8,
+   "goma": "HARD",
+   "tiempo": 119.351,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 9,
+   "goma": "HARD",
+   "tiempo": null,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 10,
+   "goma": "HARD",
+   "tiempo": 140.903,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 11,
+   "goma": "SOFT",
+   "tiempo": null,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 12,
+   "goma": "SOFT",
+   "tiempo": 110.679,
+   "motivo": "Anulada por los comisarios",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 13,
+   "goma": "SOFT",
+   "tiempo": 107.813,
+   "motivo": "Anulada por los comisarios",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 14,
+   "goma": "SOFT",
+   "tiempo": 144.378,
+   "motivo": "Más de 5 % más lenta que su mejor con esa goma",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 15,
+   "goma": "SOFT",
+   "tiempo": 105.388,
+   "motivo": "Más de 5 % más lenta que su mejor con esa goma",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 16,
+   "goma": "SOFT",
+   "tiempo": 112.134,
+   "motivo": "Más de 5 % más lenta que su mejor con esa goma",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 17,
+   "goma": "SOFT",
+   "tiempo": 91.955,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 18,
+   "goma": "SOFT",
+   "tiempo": 111.682,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 19,
+   "goma": "SOFT",
+   "tiempo": null,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 20,
+   "goma": "SOFT",
+   "tiempo": 95.074,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 21,
+   "goma": "SOFT",
+   "tiempo": 95.216,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 22,
+   "goma": "SOFT",
+   "tiempo": 96.18,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 23,
+   "goma": "SOFT",
+   "tiempo": 96.053,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 24,
+   "goma": "SOFT",
+   "tiempo": 107.878,
+   "motivo": "Tiempo poco confiable o incompleto",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP1",
+   "vuelta": 25,
+   "goma": "SOFT",
+   "tiempo": 148.686,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 1,
+   "goma": "MEDIUM",
+   "tiempo": null,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 2,
+   "goma": "MEDIUM",
+   "tiempo": 92.891,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 3,
+   "goma": "MEDIUM",
+   "tiempo": 126.685,
+   "motivo": "Más de 5 % más lenta que su mejor con esa goma",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 4,
+   "goma": "MEDIUM",
+   "tiempo": 91.745,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 5,
+   "goma": "MEDIUM",
+   "tiempo": 141.275,
+   "motivo": "Bandera o auto de seguridad",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 6,
+   "goma": "MEDIUM",
+   "tiempo": 91.019,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 7,
+   "goma": "MEDIUM",
+   "tiempo": 122.618,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 8,
+   "goma": "SOFT",
+   "tiempo": null,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 9,
+   "goma": "SOFT",
+   "tiempo": 107.909,
+   "motivo": "Más de 5 % más lenta que su mejor con esa goma",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 10,
+   "goma": "SOFT",
+   "tiempo": 90.846,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 11,
+   "goma": "SOFT",
+   "tiempo": null,
+   "motivo": "Tiempo poco confiable o incompleto",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 12,
+   "goma": "SOFT",
+   "tiempo": 100.224,
+   "motivo": "Más de 5 % más lenta que su mejor con esa goma",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 13,
+   "goma": "SOFT",
+   "tiempo": 91.126,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 14,
+   "goma": "SOFT",
+   "tiempo": 132.331,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 15,
+   "goma": "SOFT",
+   "tiempo": 137.667,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 16,
+   "goma": "SOFT",
+   "tiempo": 104.904,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 17,
+   "goma": "MEDIUM",
+   "tiempo": null,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 18,
+   "goma": "MEDIUM",
+   "tiempo": 94.979,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 19,
+   "goma": "MEDIUM",
+   "tiempo": 99.163,
+   "motivo": "Más de 5 % más lenta que su mejor con esa goma",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 20,
+   "goma": "MEDIUM",
+   "tiempo": 95.606,
+   "motivo": "Más de 5 % más lenta que su mejor con esa goma",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 21,
+   "goma": "MEDIUM",
+   "tiempo": 95.204,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 22,
+   "goma": "MEDIUM",
+   "tiempo": 95.281,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 23,
+   "goma": "MEDIUM",
+   "tiempo": 95.494,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 24,
+   "goma": "MEDIUM",
+   "tiempo": 96.389,
+   "motivo": "Más de 5 % más lenta que su mejor con esa goma",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 25,
+   "goma": "MEDIUM",
+   "tiempo": 95.141,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 26,
+   "goma": "MEDIUM",
+   "tiempo": 127.737,
+   "motivo": "Tiempo poco confiable o incompleto",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 27,
+   "goma": "MEDIUM",
+   "tiempo": null,
+   "motivo": "Tiempo poco confiable o incompleto",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP2",
+   "vuelta": 28,
+   "goma": "MEDIUM",
+   "tiempo": 149.073,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP3",
+   "vuelta": 1,
+   "goma": "SOFT",
+   "tiempo": null,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP3",
+   "vuelta": 2,
+   "goma": "SOFT",
+   "tiempo": 91.018,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP3",
+   "vuelta": 3,
+   "goma": "SOFT",
+   "tiempo": null,
+   "motivo": "Tiempo poco confiable o incompleto",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP3",
+   "vuelta": 4,
+   "goma": "SOFT",
+   "tiempo": 90.536,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP3",
+   "vuelta": 5,
+   "goma": "SOFT",
+   "tiempo": 146.359,
+   "motivo": "Más de 5 % más lenta que su mejor con esa goma",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP3",
+   "vuelta": 6,
+   "goma": "SOFT",
+   "tiempo": 90.229,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP3",
+   "vuelta": 7,
+   "goma": "SOFT",
+   "tiempo": 131.871,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP3",
+   "vuelta": 8,
+   "goma": "SOFT",
+   "tiempo": 135.068,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP3",
+   "vuelta": 9,
+   "goma": "SOFT",
+   "tiempo": 122.846,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP3",
+   "vuelta": 10,
+   "goma": "SOFT",
+   "tiempo": null,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP3",
+   "vuelta": 11,
+   "goma": "SOFT",
+   "tiempo": 105.916,
+   "motivo": "Más de 5 % más lenta que su mejor con esa goma",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP3",
+   "vuelta": 12,
+   "goma": "SOFT",
+   "tiempo": 90.305,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP3",
+   "vuelta": 13,
+   "goma": "SOFT",
+   "tiempo": null,
+   "motivo": "Tiempo poco confiable o incompleto",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP3",
+   "vuelta": 14,
+   "goma": "SOFT",
+   "tiempo": 102.251,
+   "motivo": "Más de 5 % más lenta que su mejor con esa goma",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP3",
+   "vuelta": 15,
+   "goma": "SOFT",
+   "tiempo": 106.051,
+   "motivo": "Anulada por los comisarios",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP3",
+   "vuelta": 16,
+   "goma": "SOFT",
+   "tiempo": 142.649,
+   "motivo": "Más de 5 % más lenta que su mejor con esa goma",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP3",
+   "vuelta": 17,
+   "goma": "SOFT",
+   "tiempo": 90.491,
+   "motivo": null,
+   "numero": "16"
+  },
+  {
+   "sesion": "FP3",
+   "vuelta": 18,
+   "goma": "SOFT",
+   "tiempo": 118.211,
+   "motivo": "Más de 5 % más lenta que su mejor con esa goma",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP3",
+   "vuelta": 19,
+   "goma": "SOFT",
+   "tiempo": 119.386,
+   "motivo": "Tiempo poco confiable o incompleto",
+   "numero": "16"
+  },
+  {
+   "sesion": "FP3",
+   "vuelta": 20,
+   "goma": "SOFT",
+   "tiempo": 135.21,
+   "motivo": "Entrada o salida de boxes",
+   "numero": "16"
+  }
+ ]
+}

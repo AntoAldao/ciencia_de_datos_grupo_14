@@ -36,6 +36,7 @@ ciencia_de_datos_grupo_14/
 │   ├── pagina.css/.js    #   estilo y comportamiento de la página
 │   ├── modelo_json.py    #   exporta el modelo a JSON y verifica que dé igual que sklearn
 │   ├── modelo.js         #   el modelo calculado en el navegador («Probá el modelo»)
+│   ├── ejemplo_vueltas.py #  saca de la capa bronce el ejemplo de vueltas del Sector 1 (se corre a mano)
 │   └── probar_modelo.js  #   prueba de modelo.js contra sklearn (la corre build_app.py con node)
 ├── modelo_entrega3.py    # Clases del notebook de la Entrega 3 + cargar el modelo y predecir
 ├── estilo.py             # Look and feel F1: menú, encabezado con escuderías, títulos y pie (solo decoración)
@@ -43,7 +44,7 @@ ciencia_de_datos_grupo_14/
 │   └── vendor/           #   Vega, Vega-Lite y vega-embed, que van adentro de la página
 ├── graficos/             # Gráficos de la app (Altair)
 │   ├── colores.py        #   los colores de toda la app: cada uno significa una sola cosa (aptos para daltónicos)
-│   ├── pasos.py          #   Sector 3 contado en pasos (copa de martini en un gráfico, práctica 7.9)
+│   ├── pasos.py          #   Sector 3 contado en tres pasos: un gráfico con flecha por paso
 │   └── panorama.py       #   Explorá: todas las carreras con vistas vinculadas (práctica 6.5)
 ├── app_data/             # Generado por build_app.py: predicciones, aportes, resumen y modelo.json
 ├── modelos/              # Modelo que guarda el notebook de la Entrega 3 (joblib)
@@ -110,6 +111,11 @@ nuevos): elige el modelo, lo entrena con 2018-2025 (semilla 14), lo mide en el t
 guarda. El notebook ejecutado queda en `build/Entrega_3_ejecutada.ipynb`, para comparar sus números
 con los de la app. Sin `--entrenar`, usa el modelo ya guardado y solo recalcula `app_data/` y la
 página.
+
+El ejemplo de vueltas de prácticas del Sector 1 (`app_data/ejemplo_vueltas.json`) no lo arma
+`build_app.py`: sale de la capa bronce del pipeline, que no está en el repositorio por su tamaño.
+Se genera una sola vez con `python web/ejemplo_vueltas.py <carpeta bronze/fastf1>`, que aplica los
+mismos filtros que el pipeline y corta si la mejor vuelta y el promedio no coinciden con el dataset.
 
 Tres cosas que hace `build_app.py` además de predecir:
 
