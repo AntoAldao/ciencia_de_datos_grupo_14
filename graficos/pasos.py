@@ -1,26 +1,28 @@
-"""Sector 3 · El modelo, contado en pasos: una copa de martini dentro de un gráfico.
+"""Sector 3 · El modelo, contado en tres pasos: tres gráficos fijos, uno al lado del otro.
 
-Es la estructura de la sección 7.9 de la práctica de Altair: el paso es un PARÁMETRO atado a unos
-botones (`binding_radio`), y cada capa declara en qué paso se ve. El gráfico no cambia: cambian los
-valores que las capas leen.
+Cada paso es su propio gráfico, con un título que dice qué mirar y una flecha que apunta
+exactamente ahí. El lector no tiene que descubrir ningún botón: lee de izquierda a derecha. La
+explicación larga de cada paso va debajo de su gráfico (web/pagina.py, con los números de `cifras`).
 
     Datos:           una fila por piloto y predicción (grilla o modelo) con su error en puestos.
     Transformación:  error = puesto predicho − puesto real, redondeado y recortado a ±15; después
-                     `count()` por error, predicción y estado (terminó / abandonó).
-    Marca:           barras (mark_bar), agrupadas por predicción con `xOffset`; texto como capa.
+                     cantidad de pilotos por error, predicción y estado (terminó / abandonó).
+    Marca:           barras (mark_bar), agrupadas por predicción con `xOffset`; la flecha es una
+                     regla con un triángulo en la punta, y el texto, una capa más.
     Mapeo:           error -> x (ordinal), cantidad -> y, predicción -> xOffset y color.
                      En el paso 3 el color pasa a ser "abandonó" para los que no terminaron.
-    Escalas:         ejes fijos en todos los pasos (para que el gráfico no salte) y los colores de
-                     graficos/colores.py: azul = modelo, ámbar = grilla, gris = abandono.
+    Escalas:         los tres pasos comparten los ejes (se comparan de un vistazo) y los colores
+                     de graficos/colores.py: azul = modelo, ámbar = grilla, gris = abandono.
 
 Pasos:
     1 · La grilla       solo la grilla: la mayoría termina cerca de donde largó.
     2 · El modelo       aparece el modelo: menos errores grandes, aunque no más aciertos exactos.
-    3 · Los abandonos   (por defecto) los que no terminaron son la cola de la izquierda.
-    4 · Explorá         menú de temporada y casilla para sacar los abandonos.
+    3 · Los abandonos   los que no terminaron son la cola de la izquierda.
 """
 
 from __future__ import annotations
+
+import textwrap
 
 import altair as alt
 import numpy as np
@@ -30,7 +32,6 @@ from graficos import colores as C
 
 TOPE = 15          # errores más grandes se acumulan en ±15
 GRANDE = 8         # «error grande» en el relato del paso 2: 8 puestos o más
-PASOS = ["1 · La grilla", "2 · El modelo", "3 · Los abandonos", "4 · Explorá"]
 
 
 def _mae(err: pd.Series) -> float:
@@ -69,107 +70,183 @@ def resumen_por_temporada(largo: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(filas)
 
 
-def grafico_pasos(pred: pd.DataFrame, test: dict, anio_test: int = 2026,
-                  width: int = 760, height: int = 330) -> alt.LayerChart:
-    """El histograma de errores contado en cuatro pasos. `test` es resumen["test"] de build_app."""
-    largo = errores(pred)
-    conteo = (largo.groupby(["Year", "quien", "estado", "error_bin"]).size()
-              .rename("pilotos").reset_index())
-    por_anio = resumen_por_temporada(largo)
+# ---- piezas comunes ----------------------------------------------------------------------------
+def _conteo(largo: pd.DataFrame) -> pd.DataFrame:
+    return (largo.groupby(["Year", "quien", "estado", "error_bin"]).size()
+            .rename("pilotos").reset_index())
 
-    # ---- parámetros: el paso (botones) y, para el paso 4, temporada y abandonos ----------------
-    paso = alt.param(name="paso", value=3, bind=alt.binding_radio(
-        options=[1, 2, 3, 4], labels=PASOS, name="Paso "))
-    anios = sorted(int(a) for a in conteo["Year"].unique())
-    anio = alt.param(name="anio", value=anio_test, bind=alt.binding_select(
-        options=anios, name="Temporada (paso 4) "))
-    sin_ab = alt.param(name="sin_ab", value=False, bind=alt.binding_checkbox(
-        name="Sacar los abandonos (paso 4) "))
 
-    # ---- escalas fijas: el gráfico no salta al cambiar de paso ---------------------------------
-    # 45 % de aire arriba: ahí va el relato (hasta cuatro líneas)
-    y_max = float(conteo.groupby(["Year", "quien", "error_bin"])["pilotos"].sum().max()) * 1.45
-    x = alt.X("error_bin:O", title="Error de la predicción, en puestos (negativo = lo puso más adelante de lo que terminó)",
-              scale=alt.Scale(domain=list(range(-TOPE, TOPE + 1))),
-              axis=alt.Axis(labelAngle=0, values=list(range(-TOPE, TOPE + 1, 5)), **C.EJES))
-    y = alt.Y("sum(pilotos):Q", title="Pilotos", scale=alt.Scale(domain=[0, y_max]),
-              axis=alt.Axis(**C.EJES), stack="zero")
-    color = alt.Color("grupo:N", title=None,
-                      scale=alt.Scale(domain=["Grilla", "Modelo", "Abandonó"],
-                                      range=[C.GRILLA, C.MODELO, C.ABANDONO]),
-                      legend=alt.Legend(orient="top", labelColor=C.INK, symbolType="square"))
+def _eje_x() -> alt.X:
+    return alt.X("error_bin:O", title="Error en puestos (negativo = lo puso más adelante)",
+                 scale=alt.Scale(domain=list(range(-TOPE, TOPE + 1))),
+                 axis=alt.Axis(labelAngle=0, values=list(range(-TOPE, TOPE + 1, 5)), **C.EJES))
 
-    # ---- barras: qué filas entran en cada paso y de qué color van ------------------------------
-    barras = alt.Chart(conteo).transform_filter(
-        # pasos 1-3: el test; paso 4: la temporada elegida
-        f"(paso < 4 && datum.Year == {anio_test}) || (paso == 4 && datum.Year == anio)"
-    ).transform_filter(
-        "paso >= 2 || datum.quien == 'Grilla'"                      # paso 1: solo la grilla
-    ).transform_filter(
-        "!(paso == 4 && sin_ab && datum.estado == 'Abandonó')"     # paso 4: sin abandonos
-    ).transform_calculate(
-        grupo="paso >= 3 && datum.estado == 'Abandonó' ? 'Abandonó' : datum.quien",
-        orden="datum.estado == 'Abandonó' ? 1 : 0",
-    ).mark_bar(width=alt.RelativeBandSize(0.9), cornerRadiusEnd=1).encode(
-        x=x, xOffset=alt.XOffset("quien:N", scale=alt.Scale(domain=["Grilla", "Modelo"])),
-        y=y, color=color, order=alt.Order("orden:Q"),
+
+def _eje_y(campo: str, y_max: float, apilar: bool = False) -> alt.Y:
+    return alt.Y(campo, title="Pilotos", scale=alt.Scale(domain=[0, y_max]), axis=alt.Axis(**C.EJES),
+                 stack="zero" if apilar else None)
+
+
+def _color(grupos: list[str]) -> alt.Color:
+    rango = {"Grilla": C.GRILLA, "Modelo": C.MODELO, "Abandonó": C.ABANDONO}
+    return alt.Color("grupo:N", title=None, scale=alt.Scale(domain=grupos, range=[rango[g] for g in grupos]),
+                     legend=alt.Legend(orient="top", labelColor=C.INK, symbolType="square", labelFontSize=13))
+
+
+def _barras(datos: pd.DataFrame, quienes: list[str], grupos: list[str], y_max: float) -> alt.Chart:
+    return alt.Chart(datos).mark_bar(width=alt.RelativeBandSize(0.9), cornerRadiusEnd=1).encode(
+        x=_eje_x(), xOffset=alt.XOffset("quien:N", scale=alt.Scale(domain=quienes)),
+        y=_eje_y("sum(pilotos):Q", y_max, apilar=True), color=_color(grupos), order=alt.Order("orden:Q"),
         tooltip=[alt.Tooltip("quien:N", title="Predicción"),
                  alt.Tooltip("error_bin:O", title="Error (puestos)"),
                  alt.Tooltip("grupo:N", title="Grupo"),
                  alt.Tooltip("sum(pilotos):Q", title="Pilotos")])
 
-    cero = alt.Chart(pd.DataFrame({"error_bin": [0]})).mark_rule(
-        color=C.INK, strokeDash=[3, 3], opacity=0.6).encode(x="error_bin:O")
 
-    # ---- el relato: un texto por paso, como capa (sección 7.5) ---------------------------------
-    t = test
-    f = lambda v: f"{v:.2f}".replace(".", ",")  # noqa: E731
-    # Los números del relato salen de las mismas filas que dibujan las barras (todos los pilotos
-    # del test), así un cambio en los datos no deja un texto que diga lo contrario del gráfico.
-    del_test = largo[largo["Year"] == anio_test]
+def _cero(y_max: float, hasta: float = 0.7) -> alt.Chart:
+    """Línea punteada en el 0 (acierto exacto). Llega a `hasta` del alto: arriba van los textos."""
+    return alt.Chart(pd.DataFrame({"error_bin": [0], "y": [0.0], "y2": [y_max * hasta]})).mark_rule(
+        color=C.INK, strokeDash=[3, 3], opacity=0.6).encode(x=_eje_x(), y=_eje_y("y:Q", y_max), y2="y2:Q")
+
+
+def _zona(bins: list[int], y_max: float) -> alt.Chart:
+    """Franja sombreada detrás de las barras: la parte del gráfico de la que habla el texto."""
+    return alt.Chart(pd.DataFrame({"error_bin": bins, "alto": y_max})).mark_bar(
+        color=C.INK, opacity=0.07, width=alt.RelativeBandSize(1)).encode(
+        x=_eje_x(), y=_eje_y("alto:Q", y_max))
+
+
+LINEA_PX = 18      # alto de una línea del texto de las flechas, en píxeles
+
+
+def _flecha(bin_: int, punta: float, arriba: float, texto: str, y_max: float, height: int,
+            align: str = "center", dx: int = 0) -> alt.LayerChart:
+    """Texto con su borde de arriba en `arriba` (en pilotos) y, debajo, una flecha vertical que
+    baja hasta `punta` sobre la columna `bin_`. Con align «left» o «right» el texto arranca o
+    termina en esa columna (corrido `dx` píxeles), así la flecha queda debajo de su comienzo."""
+    por_px = y_max / height
+    lineas = texto.count("\n") + 1
+    base = arriba - (lineas * LINEA_PX + 6) * por_px     # debajo de la última línea
+    hueco = 7 * por_px                                    # aire entre la punta y la barra
+    d = pd.DataFrame({"error_bin": [bin_], "base": [base], "punta": [punta + hueco + 5 * por_px],
+                      "tri": [punta + hueco], "arriba": [arriba], "texto": [texto]})
+    base_chart = alt.Chart(d)
+    linea = base_chart.mark_rule(color=C.INK, strokeWidth=1.6).encode(
+        x=_eje_x(), y=_eje_y("base:Q", y_max), y2="punta:Q")
+    triangulo = base_chart.mark_point(shape="triangle-down", size=80, filled=True, opacity=1,
+                                      color=C.INK).encode(x=_eje_x(), y=_eje_y("tri:Q", y_max))
+    rotulo = base_chart.mark_text(
+        align=align, baseline="top", dx=dx, lineBreak="\n", fontSize=14, lineHeight=LINEA_PX,
+        fontWeight=600, color=C.INK).encode(x=_eje_x(), y=_eje_y("arriba:Q", y_max), text="texto:N")
+    return alt.layer(linea, triangulo, rotulo)
+
+
+def _letras(width: int) -> int:
+    """Letras por línea del subtítulo (14 px, ~6 px por letra) para que ocupe el ancho del
+    gráfico más el eje de la izquierda (~55 px)."""
+    return int((width + 55) / 6.0)
+
+
+def _cerrar(grafico: alt.LayerChart, titulo: str, subtitulo: list[str], width: int, height: int):
+    return grafico.properties(
+        width=width, height=height,
+        title=alt.Title(titulo, subtitle=subtitulo, anchor="start", fontSize=18, color=C.INK,
+                        subtitleColor=C.INK_MUTED, subtitleFontSize=14, subtitlePadding=6, offset=10),
+    ).configure(
+        background=C.FONDO, padding={"left": 12, "right": 16, "top": 12, "bottom": 8}
+    ).configure_view(stroke=None, fill=C.FONDO).configure_text(font=C.FUENTE).configure_title(font=C.FUENTE)
+
+
+# ---- los números de los textos ------------------------------------------------------------------
+def _cifras(del_test: pd.DataFrame) -> dict:
+    # Salen de las mismas filas que dibujan las barras (todos los pilotos del test): si cambian
+    # los datos, el texto no puede decir lo contrario del gráfico.
     err = {q: del_test.loc[del_test["quien"] == q, "error"].abs() for q in ["Grilla", "Modelo"]}
-    exactos = {q: int((e.round() == 0).sum()) for q, e in err.items()}
-    grandes = {q: int((e >= GRANDE).sum()) for q, e in err.items()}
-    cerca = float((err["Grilla"] <= 2).mean())
+    fila = resumen_por_temporada(del_test).iloc[0]
+    return {
+        "exactos": {q: int((e.round() == 0).sum()) for q, e in err.items()},
+        "grandes": {q: int((e >= GRANDE).sum()) for q, e in err.items()},
+        "cerca": float((err["Grilla"] <= 2).mean()),
+        "abandonos": int(fila["abandonos"]), "pilotos": int(fila["pilotos"]),
+        "pct_error_abandonos": {q: float(fila[f"pct_aband_{q}"]) for q in ["Grilla", "Modelo"]},
+        # error medio del modelo con los que abandonaron y con los que terminaron (sin reordenar)
+        "mae_modelo_por_estado": {e: _mae(g["error"]) for e, g in
+                                  del_test[del_test["quien"] == "Modelo"].groupby("estado")},
+    }
+
+
+def cifras(pred: pd.DataFrame, anio_test: int = 2026) -> dict:
+    """Los números que citan los textos de los pasos (los del gráfico y los de debajo)."""
+    largo = errores(pred)
+    return _cifras(largo[largo["Year"] == anio_test]) | {"grande": GRANDE}
+
+
+# ---- los tres pasos ----------------------------------------------------------------------------
+def graficos_pasos(pred: pd.DataFrame, test: dict, anio_test: int = 2026,
+                   width: int = 360, height: int = 250) -> list[alt.LayerChart]:
+    """Los pasos 1, 2 y 3, cada uno su gráfico. `test` es resumen["test"] de build_app."""
+    largo = errores(pred)
+    del_test = largo[largo["Year"] == anio_test]
+    conteo = _conteo(del_test)
+    alto_col = conteo.groupby(["quien", "error_bin"])["pilotos"].sum()   # alto de cada barra
+    y_max = float(alto_col.max()) * 1.6        # arriba queda lugar para el texto y la flecha
+    f = lambda v: f"{v:.2f}".replace(".", ",")  # noqa: E731
+    t = test
+
+    c = _cifras(del_test)
+    exactos, grandes, cerca = c["exactos"], c["grandes"], c["cerca"]
     mas_menos = lambda a, b: "más" if a > b else "menos" if a < b else "los mismos"  # noqa: E731
     exactos_txt, grandes_txt = (mas_menos(exactos["Modelo"], exactos["Grilla"]),
                                 mas_menos(grandes["Modelo"], grandes["Grilla"]))
-    # a favor del modelo: más exactos o menos errores grandes; si uno va a favor y el otro en
-    # contra, «pero»
     nexo = "pero" if (exactos_txt == "más") != (grandes_txt == "menos") else "y"
-    relato = pd.DataFrame([
-        {"paso": 1, "linea": 0, "texto": f"Usar la largada como predicción: erra {f(t['mae_grilla'])} puestos en promedio."},
-        {"paso": 1, "linea": 1, "texto": f"El {cerca:.0%} termina a 2 puestos o menos de donde largó: la grilla ya predice bien."},
-        {"paso": 2, "linea": 0, "texto": f"El modelo suma clasificación, campeonato y prácticas: erra {f(t['mae_modelo'])}; "
-                                          f"la grilla, {f(t['mae_grilla'])}."},
-        {"paso": 2, "linea": 1, "texto": f"Acierta {exactos_txt} puestos exactos que la grilla ({exactos['Modelo']} contra "
-                                          f"{exactos['Grilla']}),"},
-        {"paso": 2, "linea": 2, "texto": f"{nexo} tiene {grandes_txt} errores grandes, de {GRANDE} puestos o más "
-                                          f"({grandes['Modelo']} contra {grandes['Grilla']})."},
-        {"paso": 2, "linea": 3, "texto": "Aun así, el promedio casi no baja. ¿Por qué?"},
-        {"paso": 3, "linea": 0, "texto": "En gris, los que no terminaron: son la cola de la izquierda, para los dos."},
-        {"paso": 3, "linea": 1, "texto": f"Sin ellos, el modelo erra {f(t['mae_modelo_sin_abandonos'])} y la grilla "
-                                          f"{f(t['mae_grilla_sin_abandonos'])}: los abandonos tapaban la ventaja."},
-    ])
-    texto = alt.Chart(relato).transform_filter("datum.paso == paso").mark_text(
-        align="left", baseline="top", fontSize=16, color=C.INK
-    ).transform_calculate(px="8 + datum.linea * 22").encode(
-        x=alt.value(8), y=alt.Y("px:Q", scale=None), text="texto:N")
+    pct = lambda x: f"{x:.0%}".replace("%", " %")  # noqa: E731
 
-    # paso 4: el texto sale de la temporada elegida
-    por_anio = por_anio.assign(
-        l0=lambda d: "Temporada " + d["Year"].astype(str) + ": el modelo erra " + d["mae_Modelo"].map(f)
-                     + " y la grilla " + d["mae_Grilla"].map(f) + " puestos.",
-        l1=lambda d: d["abandonos"].astype(str) + " abandonos de " + d["pilotos"].astype(str)
-                     + " pilotos, que explican el " + (d["pct_aband_Modelo"] * 100).round().astype(int).astype(str)
-                     + " % del error del modelo.")
-    texto4 = alt.Chart(por_anio.melt(id_vars="Year", value_vars=["l0", "l1"], var_name="l", value_name="texto")
-                       ).transform_filter("paso == 4 && datum.Year == anio").transform_calculate(
-        linea="datum.l == 'l0' ? 0 : 1").mark_text(
-        align="left", baseline="top", fontSize=16, color=C.INK
-    ).transform_calculate(px="8 + datum.linea * 22").encode(
-        x=alt.value(8), y=alt.Y("px:Q", scale=None), text="texto:N")
+    def alto(quien: str, b: int) -> float:
+        return float(alto_col.get((quien, b), 0))
 
-    return alt.layer(barras, cero, texto, texto4).add_params(paso, anio, sin_ab).properties(width=width, height=height).configure(
-        background=C.FONDO, padding={"left": 16, "right": 16, "top": 16, "bottom": 8}
-    ).configure_view(stroke=None, fill=C.FONDO).configure_text(font=C.FUENTE)
+    # ---- 1 · La grilla: la montaña alrededor del 0 ----
+    d1 = conteo[conteo["quien"] == "Grilla"].assign(grupo="Grilla", orden=0)
+    pico = int(alto_col.loc["Grilla"].idxmax())
+    paso1 = alt.layer(
+        _zona(list(range(-2, 3)), y_max), _barras(d1, ["Grilla"], ["Grilla"], y_max), _cero(y_max),
+        _flecha(pico, alto("Grilla", pico), y_max * 0.97,
+                f"El {pct(cerca)} termina a 2 puestos\no menos de donde largó", y_max, height))
+    sub1 = (f"Predecir que cada uno termina donde largó erra {f(t['mae_grilla'])} puestos en "
+            "promedio. La mayoría queda cerca del 0: ya es una buena predicción.")
+
+    # ---- 2 · El modelo: menos errores grandes ----
+    d2 = conteo.assign(grupo=conteo["quien"], orden=0)
+    # la flecha va a la columna de errores grandes (a la derecha) donde más se nota la diferencia
+    derecha = range(GRANDE, TOPE + 1)
+    blanco = max(derecha, key=lambda b: (alto("Grilla", b) - alto("Modelo", b), -b))
+    zona2 = [b for b in range(-TOPE, TOPE + 1) if abs(b) >= GRANDE]
+    paso2 = alt.layer(
+        _zona(zona2, y_max), _barras(d2, ["Grilla", "Modelo"], ["Grilla", "Modelo"], y_max), _cero(y_max),
+        _flecha(blanco, max(alto("Grilla", blanco), alto("Modelo", blanco)), y_max * 0.97,
+                f"Errores de {GRANDE} puestos o más\n(sombreado): modelo {grandes['Modelo']}, "
+                f"grilla {grandes['Grilla']}", y_max, height, align="right", dx=8))
+    sub2 = (f"Suma clasificación, campeonato y prácticas: erra {f(t['mae_modelo'])}; la grilla, "
+            f"{f(t['mae_grilla'])}. Acierta {exactos_txt} exactos ({exactos['Modelo']} contra "
+            f"{exactos['Grilla']}), {nexo} se equivoca por mucho {grandes_txt}. Aun así, el promedio "
+            "casi no baja. ¿Por qué? →")
+
+    # ---- 3 · Los abandonos: la cola de la izquierda ----
+    d3 = conteo.assign(grupo=np.where(conteo["estado"] == "Abandonó", "Abandonó", conteo["quien"]),
+                       orden=np.where(conteo["estado"] == "Abandonó", 1, 0))
+    cola = -TOPE
+    paso3 = alt.layer(
+        _barras(d3, ["Grilla", "Modelo"], ["Grilla", "Modelo", "Abandonó"], y_max), _cero(y_max),
+        _flecha(cola, max(alto("Grilla", cola), alto("Modelo", cola)), y_max * 0.97,
+                "Los que no terminaron:\nlos ponían adelante\ny quedaron atrás",
+                y_max, height, align="left", dx=4))
+    sub3 = ("En gris, los que no terminaron la carrera: son la cola de la izquierda, para los dos. "
+            f"Sin ellos, el modelo erra {f(t['mae_modelo_sin_abandonos'])} y la grilla "
+            f"{f(t['mae_grilla_sin_abandonos'])}: los abandonos tapaban la ventaja.")
+
+    # Vega no corta el subtítulo solo: se corta acá al ancho de la tarjeta, y los tres quedan con
+    # la misma cantidad de líneas para que los gráficos arranquen a la misma altura.
+    cortados = [textwrap.wrap(sub, width=_letras(width)) for sub in (sub1, sub2, sub3)]
+    n = max(len(c) for c in cortados)
+    return [_cerrar(paso, titulo, c + [" "] * (n - len(c)), width, height)
+            for paso, titulo, c in zip([paso1, paso2, paso3],
+                                       ["1 · La grilla", "2 · El modelo", "3 · Los abandonos"], cortados)]
