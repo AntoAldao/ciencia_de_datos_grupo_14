@@ -224,7 +224,7 @@ def tarjetas_portada(test: dict, ej: dict, pct_error: float, pct_filas: float,
                    ("a", f"Abandonó: {a['termino']}.º")])
         + "</div>")
     tarjeta3 = (
-        '<div class="tarjeta"><span class="rotulo">3 · Por qué se empatan</span>'
+        '<div class="tarjeta abandonos"><span class="rotulo">3 · Por qué se empatan</span>'
         f'<span class="valor"><span class="a">{pct_error:.0f}%</span></span>'
         f'<span class="ayuda">del error lo aportan los <b>abandonos</b>, que son apenas 1 de cada '
         f'{round(100 / pct_filas)} pilotos.</span><div class="separador"></div>'
@@ -234,9 +234,9 @@ def tarjetas_portada(test: dict, ej: dict, pct_error: float, pct_filas: float,
         'nadie puede anticipar quién abandona.</div>'
         f'<div class="barras" role="img" aria-label="Abandonos: {pct_filas:.0f}% de los pilotos y '
         f'{pct_error:.0f}% del error">'
-        f'<div class="barra"><span>de los pilotos</span><div class="fondo"><div class="lleno" '
+        f'<div class="barra pilotos"><span>de los pilotos</span><div class="fondo"><div class="lleno" '
         f'style="width:{pct_filas:.0f}%"></div></div><b>{pct_filas:.0f}%</b></div>'
-        f'<div class="barra"><span>del error</span><div class="fondo"><div class="lleno" '
+        f'<div class="barra error"><span>del error</span><div class="fondo"><div class="lleno" '
         f'style="width:{pct_error:.0f}%"></div></div><b>{pct_error:.0f}%</b></div></div>'
         + leyenda([("a", f"Abandonaron: {n_abandonos} de {n_pilotos} pilotos")])
         + "</div>")
@@ -1134,7 +1134,9 @@ def generar(destino: Path = SITIO) -> Path:
 </style>
 </head>
 <body>
-<aside class="lateral">{estilo.menu([t.format(n=n_columnas) for t in RECORRIDO], EXPLORAR, {3: [("Dos carreras, paso a paso", "dos-carreras"), ("Qué nos llevamos", "que-nos-llevamos")]})}</aside>
+<button class="mostrar-indice" type="button" aria-controls="indice" aria-expanded="true">
+  <span class="flecha" aria-hidden="true">‹</span><span class="texto">Ocultar índice</span></button>
+<aside class="lateral" id="indice">{estilo.menu([t.format(n=n_columnas) for t in RECORRIDO], EXPLORAR, {3: [("Dos carreras, paso a paso", "dos-carreras"), ("Qué nos llevamos", "que-nos-llevamos")]})}</aside>
 <main>
 {chr(10).join(cuerpo)}
 </main>
