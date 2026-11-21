@@ -437,3 +437,66 @@ select:focus-visible { outline: 2px solid var(--f1-rojo); outline-offset: 2px; }
 @media (max-width: 1350px) {
   .exp-filtros { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+/* ---------- Portada: las tres tarjetas, cada una con su ejemplo ----------
+   Comparten 7 filas de una grilla común (subgrid): rótulo, número, explicación, línea, ejemplo,
+   dibujo y leyenda quedan a la misma altura en las tres. Modelo y grilla usan en reposo los colores
+   de los gráficos (--c-modelo, --c-grilla, desde graficos/colores.py); al pasar el mouse por una
+   tarjeta se encienden los de Alpine, la escudería de los ejemplos. */
+.tarjetas-portada { display: grid; grid-template-columns: repeat(3, 1fr); column-gap: 16px; margin: 1.2rem 0 .6rem; }
+.tarjetas-portada .tarjeta {
+  display: grid; grid-row: span 7; grid-template-rows: subgrid; row-gap: 10px; align-items: start;
+  background: var(--f1-panel); border: 1px solid var(--f1-borde); border-top: 4px solid var(--f1-rojo);
+  border-radius: 8px; padding: 16px 20px 18px; box-shadow: var(--f1-sombra);
+  transition: box-shadow .2s ease, transform .2s ease;
+}
+.tarjetas-portada .tarjeta:hover, .tarjetas-portada .tarjeta:focus-within {
+  --c-modelo: #0093CC; --c-grilla: #E0408A; --c-grilla-punto: #FF87BC;   /* azul y rosa de Alpine */
+  box-shadow: 0 2px 4px rgba(60,45,20,.08), 0 10px 26px rgba(60,45,20,.12); transform: translateY(-2px);
+}
+.tarjetas-portada .rotulo { font-size: .85rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+                   color: var(--f1-tinta-suave); }
+.tarjetas-portada .valor { font-weight: 900; font-style: italic; font-size: clamp(1.6rem, 2.4vw, 2.2rem); line-height: 1.1;
+                  font-variant-numeric: tabular-nums; }
+.tarjetas-portada .ayuda { font-size: .95rem; line-height: 1.4; color: var(--f1-tinta-suave); }
+.tarjetas-portada .m { color: var(--c-modelo); } .tarjetas-portada .g { color: var(--c-grilla); } .tarjetas-portada .a { color: var(--c-abandono); }
+.tarjetas-portada .m, .tarjetas-portada .g, .tarjetas-portada .punto, .tarjetas-portada .tramo, .tarjetas-portada .leyenda i { transition: color .25s ease, background-color .25s ease; }
+.tarjetas-portada .separador { border-top: 1px solid var(--f1-borde); align-self: center; }
+.tarjetas-portada .caso { align-self: stretch; font-size: .95rem; line-height: 1.4; background: var(--f1-hueco);
+                 border-radius: 6px; padding: 10px 12px; }
+.tarjetas-portada .caso .quien { display: flex; align-items: center; gap: 8px; font-weight: 700; margin-bottom: 4px; }
+.tarjetas-portada .caso .quien img { height: 16px; width: auto; max-width: 28px; flex: 0 0 auto; }
+.tarjetas-portada .caso .quien span { font-weight: 400; color: var(--f1-tinta-suave); font-size: .88rem; }
+.tarjetas-portada .caso .quien .icono { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 3px;
+                               background: var(--c-abandono); color: #fff; font-size: .7rem; font-weight: 900; }
+/* la recta de puestos, del 1.º al último */
+.tarjetas-portada .pista { position: relative; height: 62px; margin: 0 12px; }
+.tarjetas-portada .pista .linea { position: absolute; left: 0; right: 0; top: 24px; height: 6px; border-radius: 3px;
+  background: repeating-linear-gradient(90deg, #DCD3C4 0 calc(100%/21 - 2px), var(--f1-panel) 0 calc(100%/21)); }
+.tarjetas-portada .pista .tramo { position: absolute; top: 25px; height: 4px; border-radius: 2px; }
+.tarjetas-portada .pista .tramo.g { background: var(--c-grilla-punto); }
+.tarjetas-portada .pista .tramo.a { background: var(--c-abandono); opacity: .55; }
+.tarjetas-portada .pista .punto { position: absolute; top: 16px; width: 22px; height: 22px; border-radius: 50%;
+  transform: translateX(-50%); border: 3px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.tarjetas-portada .punto.m { background: var(--c-modelo); } .tarjetas-portada .punto.g { background: var(--c-grilla-punto); }
+.tarjetas-portada .punto.a { background: var(--c-abandono); }
+.tarjetas-portada .punto.r { background: var(--f1-tinta); width: 10px; height: 10px; top: 22px; border: none; box-shadow: none; }
+.tarjetas-portada .pista .tick { position: absolute; top: 42px; font-size: .74rem; color: var(--f1-tinta-suave);
+                        transform: translateX(-50%); white-space: nowrap; }
+.tarjetas-portada .leyenda { display: flex; flex-wrap: nowrap; white-space: nowrap; gap: 10px; font-size: .8rem; font-weight: 700; }
+.tarjetas-portada .leyenda i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
+.tarjetas-portada .leyenda i.m { background: var(--c-modelo); } .tarjetas-portada .leyenda i.g { background: var(--c-grilla-punto); }
+.tarjetas-portada .leyenda i.a { background: var(--c-abandono); }
+.tarjetas-portada .leyenda i.r { background: var(--f1-tinta); width: 8px; height: 8px; vertical-align: 0; }
+/* las dos barras de la tercera tarjeta, del mismo alto que la recta */
+.tarjetas-portada .barras { display: flex; flex-direction: column; justify-content: center; gap: 8px; height: 62px; margin: 0 12px; }
+.tarjetas-portada .barra { display: grid; grid-template-columns: 96px 1fr 40px; align-items: center; gap: 8px; font-size: .9rem; }
+.tarjetas-portada .barra .fondo { height: 16px; background: var(--f1-hueco); border-radius: 3px; overflow: hidden; }
+.tarjetas-portada .barra .lleno { height: 100%; background: var(--c-abandono); }
+.tarjetas-portada .barra b { text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 1000px) {
+  .tarjetas-portada { grid-template-columns: 1fr; row-gap: 16px; }
+  .tarjetas-portada .tarjeta { grid-row: auto; grid-template-rows: none; }
+  .tarjetas-portada .leyenda { flex-wrap: wrap; white-space: normal; }
+}
+@media (prefers-reduced-motion: reduce) { .tarjetas-portada .tarjeta { transition: none; } .tarjetas-portada .tarjeta:hover { transform: none; } }
