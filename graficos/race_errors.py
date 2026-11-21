@@ -22,9 +22,10 @@ from __future__ import annotations
 import altair as alt
 import pandas as pd
 
+from graficos import carreras
 from graficos import colores as C
 
-from graficos.race_cars import ASPHALT, BAD, GOOD, INK, INK_MUTED, LANE
+from graficos.race_cars import ASPHALT, INK, INK_MUTED, LANE
 from graficos.season_points import SCENARIO_COLORS
 
 MODEL_COLOR = SCENARIO_COLORS["Modelo"]
@@ -54,8 +55,11 @@ def errors_chart(errors: pd.DataFrame, width: int = 860,
     axis = dict(labelColor=INK_MUTED, titleColor=INK_MUTED, gridColor=LANE, domainColor=LANE,
                 tickColor=LANE)
     n_rounds = int(errors["round"].max())
-    x = alt.X("round:O", title="Fecha", axis=alt.Axis(labelAngle=0, **axis),
-              scale=alt.Scale(domain=list(range(1, n_rounds + 1))))
+    anio = int(errors["race"].iloc[0].split("-")[0])
+    rondas = list(range(1, n_rounds + 1))
+    x = alt.X("round:O", title="Gran Premio", scale=alt.Scale(domain=rondas),
+              axis=alt.Axis(labelAngle=-40, labelAlign="right",
+                            labelExpr=carreras.eje(anio, rondas), **axis))
     base = alt.Chart(errors).transform_calculate(
         m="ajuste ? datum.mae_adj : datum.mae_model",
         g="ajuste ? datum.mae_grid_adj : datum.mae_grid",
@@ -113,7 +117,7 @@ def errors_chart(errors: pd.DataFrame, width: int = 860,
 
     # 2. Diferencia: positivo = el modelo acertó mejor que la grilla.
     tone = alt.Color("tone:N", scale=alt.Scale(domain=["mejor", "peor", "igual"],
-                                               range=[GOOD, BAD, INK_MUTED]), legend=None)
+                                               range=[C.MODELO, C.GRILLA, INK_MUTED]), legend=None)
     bars = base.mark_bar(width=alt.RelativeBandSize(0.6), cornerRadiusEnd=3).encode(
         x=x, y=alt.Y("diff:Q", title="Grilla − modelo", axis=alt.Axis(**axis)),
         color=tone, tooltip=tooltip)
@@ -125,7 +129,8 @@ def errors_chart(errors: pd.DataFrame, width: int = 860,
     p2 = alt.layer(zero, bars, arrows).properties(
         width=width, height=150, title=alt.Title(
             "¿Quién acertó mejor?",
-            subtitle="▲ verde: el modelo se equivocó menos que la grilla; ▼ vino: más.",
+            subtitle="▲ azul: el modelo se equivocó menos que la grilla; ▼ ámbar: la grilla se "
+                     "equivocó menos (los colores del modelo y la grilla de toda la página).",
             color=INK, subtitleColor=INK_MUTED, anchor="start", fontSize=15))
 
     # 3. Abandonos por carrera (otra medida: panel aparte, no segundo eje).

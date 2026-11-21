@@ -50,6 +50,7 @@ hr {
 }
 .metrica .ayuda { font-size: .9rem; line-height: 1.4; color: var(--f1-tinta-suave); }
 .metrica .delta { font-size: 1.1rem; font-style: normal; font-weight: 700; }
+.metrica .valor > .delta:only-child { font-size: inherit; }   /* «Puestos que cambió»: es el valor */
 .metrica .delta.sube { color: #2F855A; }
 .metrica .delta.baja { color: #6A1B4D; }
 
@@ -74,9 +75,10 @@ hr {
 .grafico .vega-bindings:empty { display: none; }
 .grafico .vega-bind { display: flex; margin: 0; align-items: center; gap: 8px; }
 /* Gráfico y su texto lado a lado; si no entran los dos, el texto baja abajo del gráfico */
+/* el texto, centrado en vertical respecto de su gráfico */
 .dos-columnas { display: flex; gap: 0 2.5rem; align-items: center; flex-wrap: wrap; }
 .dos-columnas > .grafico { flex: 0 1 auto; }
-.dos-columnas > p { flex: 1 1 300px; max-width: 70ch; }
+.dos-columnas > p { flex: 1 1 300px; }   /* ocupa todo el lugar que deja el gráfico */
 /* Sector 3: los pasos, uno al lado del otro (se leen de izquierda a derecha), cada gráfico con
    su explicación debajo, del mismo ancho que el gráfico */
 .pasos-fila { display: flex; flex-wrap: wrap; gap: 0 16px; align-items: flex-start; }
@@ -142,7 +144,8 @@ select:focus-visible { outline: 2px solid var(--f1-rojo); outline-offset: 2px; }
 .pestanias button[aria-selected="true"] { background: var(--f1-panel); color: var(--f1-rojo); box-shadow: inset 0 -3px var(--f1-rojo); }
 .pestanias button:focus-visible { outline: 2px solid var(--f1-rojo); outline-offset: 2px; }
 
-/* «Carrera por carrera»: los botones «Correr» y «Volver a la largada» (web/pagina.js) */
+/* Carreras animadas (las guiadas del Sector 3 y «Carrera por carrera»): los botones «Correr» y
+   «Volver a la largada» (web/pagina.js) */
 .grafico.autos { padding: 0 0 8px; overflow: hidden; align-items: stretch; }
 .controles-autos {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 20px; margin-bottom: 14px;
@@ -155,20 +158,199 @@ select:focus-visible { outline: 2px solid var(--f1-rojo); outline-offset: 2px; }
 }
 .controles-autos button:hover { border-color: var(--f1-tinta); }
 .controles-autos button:focus-visible { outline: 2px solid var(--f1-tinta); outline-offset: 2px; }
-#correr {
+.controles-autos .correr {
   background: var(--f1-rojo); border-color: var(--f1-rojo); color: #fff; font-style: italic;
   clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); padding: 6px 22px;
 }
-#correr:hover { filter: brightness(1.12); }
+.controles-autos .correr:hover { filter: brightness(1.12); }
+.controles-autos .pista { font-size: .95rem; color: var(--f1-tinta-suave); }
 #selector-autos .vega-bindings { order: 0; margin: 0; padding: 0; border: none; background: none; }
 .marco { overflow: hidden; }
 .marco .vista { transform-origin: top left; align-self: flex-start; }
 
-/* Probá el modelo */
-.fila-controles { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 40px; margin: 1rem 0; }
-.controles-modelo { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 32px; }
+
+/* ---------- Carreras guiadas del Sector 3 (scrollytelling, web/pagina.js) ----------
+   Cada carrera es un escenario: un fondo fijo que tapa la pantalla mientras dura la carrera
+   (no asoma lo de arriba ni lo de abajo, con cualquier zoom) y lleva el panel, quieto. A la
+   derecha, las notas pasan por encima. pagina.js dimensiona el gráfico según el espacio real
+   (--lienzo-w/--lienzo-h), el ancho del panel (--panel-w) y su altura (--tope: el panel queda
+   arriba, pegado al texto que lo presenta); las notas se alinean con el panel. La segunda carrera se monta
+   sobre el final de la primera: su escenario reemplaza al de la primera sin que nada se mueva. */
+.guiada {
+  --columnas: var(--panel-w, minmax(0, 1fr)) minmax(280px, 360px);
+  display: grid; grid-template-columns: var(--columnas);
+  justify-content: center; align-items: start; gap: 0 28px; margin: .5rem 0 2.5rem;
+  position: relative;
+}
+/* La segunda carrera se monta sobre el final de la primera, pero su escenario está invisible
+   hasta quedar fijo (pagina.js le pone .montada): ahí aparece encima del de la primera, que no
+   se movió. Así no se ven dos gráficos superpuestos mientras se scrollea. */
+.guiada:has(+ .ancla-salida + .guiada) { margin-bottom: 0; }
+.ancla-salida + .guiada { margin-top: -100vh; z-index: 2; }
+/* La última carrera: lo que sigue sube hasta quedar justo debajo del panel (sin el lugar que
+   sobra del escenario ni margen). Mientras dura la carrera el escenario lo tapa; al terminar
+   (.terminada), el fondo del escenario se vuelve transparente y aparece pegado al gráfico. */
+.guiada.ultima { margin-bottom: calc(-1 * var(--sobra, 0px)); }
+.guiada.ultima.terminada .escenario { background: transparent; }
+.ancla-salida + .guiada .escenario { opacity: 0; visibility: hidden; transition: opacity .3s ease, visibility .3s; }
+.ancla-salida + .guiada.montada .escenario { opacity: 1; visibility: visible; }
+.escenario {
+  grid-column: 1 / -1; grid-row: 1; position: sticky; top: 0; height: 100vh; z-index: 0;
+  display: grid; grid-template-columns: var(--columnas); justify-content: center; gap: 0 28px;
+  align-items: start; background: var(--f1-papel);
+}
+.guiada-grafico {
+  grid-column: 1; margin-top: var(--tope, 12px); display: flex; flex-direction: column;
+  border: 1px solid var(--f1-borde); border-radius: 10px; background: var(--f1-papel);
+  box-shadow: var(--f1-sombra); overflow: hidden;
+}
+.guiada-cabecera { padding: 14px 18px 10px; }
+/* el color de cada carrera (el de quien gana: ámbar la grilla, azul el modelo, como en los
+   gráficos): borde del panel y etiqueta junto al título, para notar el cambio de carrera */
+.guiada.gana-grilla { --color-carrera: #B8660B; --texto-carrera: #7A4206; --fondo-carrera: #F6E7D2; }
+.guiada.gana-modelo { --color-carrera: #2166AC; --texto-carrera: #174A7A; --fondo-carrera: #DCE8F4; }
+.guiada-grafico { border: 2px solid var(--color-carrera, var(--f1-borde)); }
+.guiada-cabecera h3 { margin: 0 0 .3rem; font-size: 1.3rem; line-height: 1.25; scroll-margin-top: 1rem; }
+.guiada-cabecera h3 .ganador {
+  display: inline-block; margin-left: 8px; padding: 1px 10px; border-radius: 999px; vertical-align: 3px;
+  font-size: .85rem; font-weight: 700; letter-spacing: .02em;
+  color: var(--texto-carrera); background: var(--fondo-carrera);
+}
+.guiada-progreso .orden { font-weight: 600; }
+/* en qué parada se está y el link para saltear la carrera */
+.guiada-progreso {
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 16px; margin: 0 0 .5rem;
+  font-size: .86rem; color: var(--f1-tinta-suave);
+}
+.guiada-progreso .saltar { color: var(--f1-tinta-suave); text-decoration: underline; text-underline-offset: 2px; }
+.guiada-progreso .saltar:hover, .guiada-progreso .saltar:focus-visible { color: var(--f1-rojo); }
+.ancla-salida { display: block; scroll-margin-top: 1rem; }
+/* cierre del relato: tres párrafos lado a lado (qué aprendimos, límites, qué sigue) */
+.cierre-relato { margin: 3rem 0 1rem; padding-top: 1.25rem; border-top: 1px solid var(--f1-linea); }
+.cierre-relato h2 { margin: 0 0 1rem; }
+.cierre-columnas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 32px; }
+.cierre-columnas p { margin: 0; max-width: 60ch; }
+/* título de la subsección de las carreras guiadas */
+.subseccion { margin: 2.5rem 0 .5rem; padding-top: 1.25rem; border-top: 1px solid var(--f1-linea); font-size: 1.45rem; }
+/* texto solo para lectores de pantalla */
+.solo-lectores {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);
+  clip-path: inset(50%); white-space: nowrap;
+}
+.pistas { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 10px; }
+.pista-rotulo {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; padding: 5px 10px;
+  border: 1px solid transparent; border-radius: 6px; font-size: .9rem; color: var(--f1-tinta-suave);
+  transition: border-color .25s, color .25s, background-color .25s;
+}
+/* no son botones: solo la pista que se está viendo lleva recuadro */
+.pista-rotulo b { color: var(--f1-tinta-suave); font-weight: 600; }
+.pista-rotulo.activa b { color: var(--f1-tinta); font-weight: 700; }
+.pista-rotulo.activa { border-color: var(--f1-rojo); background: var(--f1-panel); color: var(--f1-tinta); }
+/* el lienzo mide lo que el gráfico escalado; las dos pistas se superponen y se ve la activa */
+.guiada-lienzo {
+  position: relative; width: var(--lienzo-w, 100%); height: var(--lienzo-h, 70vh);
+  margin: 6px auto 8px;
+}
+.capa { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity .35s, visibility .35s; }
+.capa.activa { opacity: 1; visibility: visible; }
+.capa .vista { transform-origin: top left; width: max-content; }
+.capa .vista:empty::before { content: "Cargando el gráfico…"; color: var(--f1-tinta-suave); }
+/* el resumen, debajo del gráfico: su lugar está siempre (el panel no cambia de alto) y el texto
+   aparece con la última tanda */
+.guiada-resumen {
+  margin: 0; padding: 10px 18px 14px; border-top: 1px solid var(--f1-linea); background: var(--f1-panel);
+  font-size: .95rem; line-height: 1.5; opacity: 0; transition: opacity .4s ease;
+}
+.guiada-resumen p { margin: 0; }
+.guiada.con-resumen .guiada-resumen { opacity: 1; }
+
+/* La columna de notas: un lugar fijo (.guiada-notas, a la par del panel) donde entra la tanda
+   activa, y debajo las paradas invisibles (.marca), una pantalla cada una. (Las paradas se
+   suben debajo del lugar de las notas, y no al revés: así ese lugar deja de estar fijo junto
+   con el panel, al terminar la carrera.) */
+.guiada-pasos { position: relative; grid-column: 2; grid-row: 1; z-index: 1; }
+.guiada-notas { position: sticky; top: var(--tope, 12px); height: var(--notas-h, 80vh); z-index: 1; }
+.marcas { margin-top: calc(-1 * var(--notas-h, 80vh)); padding: 75vh 0 var(--notas-h, 80vh); }
+.marca { height: 100vh; }
+/* cada tanda ocupa el lugar fijo; solo se ve la activa, que entra desde abajo */
+.grupo-pasos {
+  position: absolute; inset: 0; visibility: hidden; opacity: 0; transform: translateY(40px);
+  transition: opacity .35s ease, transform .45s cubic-bezier(.2, .7, .2, 1), visibility .45s;
+}
+.grupo-pasos.activa { visibility: visible; opacity: 1; transform: none; }
+.grupo-pasos.sale { transform: translateY(-40px); }
+/* las tarjetas se ubican a la altura de su recuadro (top lo pone pagina.js) */
+.grupo-pasos .paso-nota { position: absolute; left: 0; right: 0; }
+.grupo-pasos.intro .como-leer { position: absolute; top: var(--lienzo-y, 0); left: 0; right: 0; }
+.paso-nota {
+  display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px;
+  background: var(--f1-panel); border: 1px solid var(--f1-rojo); border-radius: 6px;
+  font-size: .95rem; line-height: 1.45; transition: top .3s ease; box-shadow: var(--f1-sombra);
+}
+.paso-nota:focus-visible { outline: 2px solid var(--f1-rojo); outline-offset: 2px; }
+.paso-nota h4 { margin: 0 0 .25rem; font-size: 1.02rem; }
+.paso-nota p { margin: 0; }
+.paso-nota .num {
+  flex: 0 0 auto; display: inline-grid; place-items: center; width: 1.7rem; height: 1.7rem;
+  border-radius: 50%; background: var(--f1-rojo); color: #fff; font-weight: 700; font-size: .95rem;
+}
+
+/* Cómo leer el gráfico: fijo en el panel en pantallas grandes; en notebook, primera parada */
+.como-leer { padding: 10px 18px 12px; background: var(--f1-panel); }
+.como-leer h4 { margin: 0 0 .35rem; font-size: .85rem; letter-spacing: .04em; text-transform: uppercase; color: var(--f1-tinta-suave); }
+.como-leer dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 20px; margin: 0; }
+.como-leer dt { font-weight: 700; font-size: .92rem; }
+.como-leer dd { margin: .1rem 0 0; font-size: .86rem; line-height: 1.4; color: var(--f1-tinta-suave); }
+.como-leer.fija { border-top: 1px solid var(--f1-linea); border-bottom: 1px solid var(--f1-linea); }
+.como-leer.suelta { border: 1px solid var(--f1-linea); border-radius: 6px; }
+.como-leer.suelta dl { grid-template-columns: 1fr; gap: 8px; }
+.grupo-pasos.intro, .marca.intro { display: none; }
+/* plegado (segunda carrera): una línea que se despliega */
+.como-leer.plegada { padding: 8px 18px; }
+.como-leer.plegada summary {
+  cursor: pointer; font-size: .85rem; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--f1-tinta-suave); font-weight: 600;
+}
+.como-leer.plegada summary:focus-visible { outline: 2px solid var(--f1-rojo); outline-offset: 2px; }
+.como-leer.plegada[open] summary { margin-bottom: .4rem; }
+/* Notebook: gráfico angosto, columna de notas más chica y «Cómo leer» como primera parada */
+.guiada.modo-medio { --columnas: var(--panel-w, minmax(0, 1fr)) minmax(240px, 300px); gap: 0 20px; }
+.guiada.modo-medio .escenario { gap: 0 20px; }
+.guiada.modo-medio .como-leer.fija:not(.plegada) { display: none; }
+.guiada.modo-medio .como-leer.plegada dl { grid-template-columns: 1fr 1fr; }
+.guiada.modo-medio .grupo-pasos.intro, .guiada.modo-medio .marca.intro { display: block; }
+.guiada.modo-medio .solo-completo { display: none; }
+/* en notebook el alto es para el gráfico: las pistas, solo con su nombre; el resumen, más chico */
+.guiada.modo-medio .pista-rotulo span { display: none; }
+.guiada.modo-medio .guiada-cabecera { padding: 10px 14px 8px; }
+.guiada.modo-medio .guiada-resumen { font-size: .88rem; padding: 8px 14px 10px; }
+@media (prefers-reduced-motion: reduce) { .capa, .paso-nota, .pista-rotulo, .grupo-pasos, .guiada-resumen, .escenario { transition: none !important; } }
+
+/* Probá el modelo: un solo panel, los datos a la izquierda y la carrera a la derecha */
+.simulador {
+  display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); margin: 1rem 0;
+  background: var(--f1-panel); border: 1px solid var(--f1-linea); border-top: 3px solid var(--f1-rojo);
+  border-radius: 8px;
+}
+.sim-datos { padding: 18px 22px; border-right: 1px solid var(--f1-linea); }
+.sim-carrera { padding: 18px 22px; min-width: 0; }
+.sim-titulo {
+  display: flex; align-items: center; gap: 10px; margin: 0 0 .75rem; font-size: 1.05rem;
+  letter-spacing: .04em; text-transform: uppercase;
+}
+.sim-titulo span {
+  display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%;
+  background: var(--f1-rojo); color: #fff; font-size: .9rem;
+}
+.sim-carrera .metricas { margin-top: 0; }
+/* carrera y piloto uno debajo del otro: los nombres de los GP no entran en media columna */
+.sim-datos .fila-controles { grid-template-columns: 1fr; gap: 12px; }
+.sim-carrera .grafico.autos { margin-bottom: 0; }
+.fila-controles { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; margin: 0 0 1rem; }
+.controles-modelo { display: grid; grid-template-columns: 1fr; gap: 10px; }
 .fila-controles .campo select { width: 100%; }
-.control { display: flex; flex-direction: column; gap: 4px; min-height: 104px; }
+.control { display: flex; flex-direction: column; gap: 4px; min-height: 84px; }
 .control .casilla { display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; cursor: pointer; }
 .control .casilla input {
   appearance: none; -webkit-appearance: none; margin: 0; width: 1.1rem; height: 1.1rem; flex: 0 0 auto;
@@ -179,6 +361,14 @@ select:focus-visible { outline: 2px solid var(--f1-rojo); outline-offset: 2px; }
 }
 .control .casilla input:focus-visible { outline: 2px solid var(--f1-rojo); outline-offset: 2px; }
 .control .deslizador { display: flex; flex-direction: column; gap: 2px; font-size: .95rem; }
+/* sin dato: el control queda en su lugar, atenuado y deshabilitado */
+.control.sin-dato .deslizador { opacity: .45; }
+.control.sin-dato input[type="range"] { cursor: not-allowed; }
+/* las prácticas y el desgaste, plegados debajo de los controles principales */
+.mas-practicas { border-top: 1px solid var(--f1-linea); padding-top: 8px; }
+.mas-practicas summary { cursor: pointer; font-weight: 600; color: var(--f1-tinta-suave); padding: 4px 0; }
+.mas-practicas summary:focus-visible { outline: 2px solid var(--f1-rojo); outline-offset: 2px; }
+.mas-practicas[open] summary { margin-bottom: 8px; }
 .control .deslizador > span { display: flex; justify-content: space-between; gap: 12px; }
 .control .deslizador output { color: var(--f1-rojo); font-weight: 700; font-variant-numeric: tabular-nums; }
 .control input[type="range"] { width: 100%; accent-color: var(--f1-rojo); cursor: pointer; }
@@ -191,13 +381,59 @@ select:focus-visible { outline: 2px solid var(--f1-rojo); outline-offset: 2px; }
 }
 .aviso p { margin: .3rem 0; }
 
-@media (max-width: 1500px) { .controles-modelo { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 1300px) {
+  .simulador { grid-template-columns: 1fr; }
+  .sim-datos { border-right: none; border-bottom: 1px solid var(--f1-linea); }
+  .controles-modelo { grid-template-columns: 1fr 1fr; gap: 10px 32px; }
+}
 @media (max-width: 1000px) {
   .lateral { position: static; width: auto; border-right: none; border-bottom: 1px solid var(--f1-borde); }
   main { margin-left: 0; padding: 1.5rem 1rem; }
   h1 { font-size: 1.9rem; }
   .idea { font-size: 1.2rem; }
-  .metricas, .fila-controles, .proceso { grid-template-columns: 1fr; }
+  .metricas, .fila-controles, .controles-modelo, .proceso { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 @media print { .lateral { display: none; } main { margin-left: 0; } }
+
+/* ---------- Explorá · Todos los pilotos ---------- */
+.explorador { display: flex; flex-direction: column; gap: 14px; margin: 1rem 0 2rem; }
+.exp-filtros {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 16px; align-items: end;
+  padding: 16px 18px; background: var(--f1-panel); border: 1px solid var(--f1-borde); border-radius: 6px;
+}
+.exp-filtros select, .exp-filtros input { width: 100%; }
+.exp-rango { border: 0; padding: 0; margin: 0; flex-direction: row !important; align-items: center; flex-wrap: wrap; }
+.exp-rango legend { width: 100%; padding: 0; margin-bottom: 4px; }
+.exp-rango input { flex: 1 1 0; min-width: 0; }
+.exp-rango span { color: var(--f1-tinta-suave); }
+.explorador input[type="number"] {
+  padding: 6px 10px; font: inherit; color: var(--f1-tinta); background: var(--f1-hueco-input);
+  border: 1px solid var(--f1-borde); border-radius: 4px;
+}
+.explorador input[type="number"]:focus-visible { outline: 2px solid var(--f1-rojo); outline-offset: 2px; }
+.explorador button {
+  font: inherit; font-weight: 600; padding: 7px 14px; cursor: pointer; color: var(--f1-tinta);
+  background: var(--f1-casilla); border: 1px solid var(--f1-borde); border-radius: 4px;
+}
+.explorador button:hover { border-color: var(--f1-tinta-suave); }
+.explorador button:focus-visible { outline: 2px solid var(--f1-rojo); outline-offset: 2px; }
+.exp-limpiar { visibility: hidden; }
+.explorador.con-filtros .exp-limpiar { visibility: visible; }
+.exp-cuenta { margin: 0; font-weight: 600; }
+.exp-resumen { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.exp-resumen .metrica.es-modelo .valor { color: var(--f1-modelo, #2166AC); }
+.exp-resumen .metrica.es-grilla .valor { color: #8A4A06; }
+.exp-grafico { background: var(--f1-panel); border: 1px solid var(--f1-borde); border-radius: 6px; }
+.exp-grafico { padding: 14px 18px; }
+.exp-grafico .vista { width: 100%; }
+.exp-grafico-cabeza { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.exp-grafico h4 { margin: 0; font-size: 1.1rem; }
+.exp-agrupar { display: flex; gap: 6px; flex-wrap: wrap; }
+.exp-agrupar button { padding: 4px 12px; font-weight: 500; }
+.exp-agrupar button[aria-pressed="true"] { background: var(--f1-tinta); color: #FFFFFF; border-color: var(--f1-tinta); }
+.exp-ayuda { margin: 6px 0 4px; }
+.exp-grafico .exp-csv { margin-left: auto; }
+@media (max-width: 1350px) {
+  .exp-filtros { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

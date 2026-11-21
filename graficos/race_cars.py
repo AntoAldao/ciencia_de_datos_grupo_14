@@ -30,6 +30,7 @@ import altair as alt
 import numpy as np
 import pandas as pd
 
+from graficos import carreras
 from graficos import colores as C
 from graficos import logos
 
@@ -57,7 +58,7 @@ X_END = 0.76       # líder al llegar
 FIELD_SPAN = 0.5   # ancho que ocupa el pelotón al llegar (del líder al más lejano)
 GRID_STEP = 0.3    # separación en la formación de largada, en puestos (compacta)
 LANE_CHANGE = 0.04  # duración de un cambio de carril, como fracción del avance
-X_DG, X_DM, X_PCT = 1.41, 1.54, 1.67   # columnas Δ grilla, Δ modelo y mejora (borde derecho)
+X_DG, X_DM, X_PCT = 1.385, 1.54, 1.67   # columnas Δ grilla, Δ modelo y mejora (borde derecho)
 RACE_LAPS = 58     # vueltas supuestas por carrera (el dataset no trae el total)
 CRASH_MAX = 0.9    # el choque más tardío (ej. descalificados con 0 vueltas de desventaja)
 NO_CRASH = 2.0     # `crash_s` de quien no choca (fuera de 0..1)
@@ -240,7 +241,7 @@ def race_table(df: pd.DataFrame, stretch: bool = False,
     status = df["RACE_Status"] if "RACE_Status" in df else pd.Series("", index=df.index)
     return pd.DataFrame({
         "race": df["Year"].astype(str) + "-" + df["RoundNumber"].astype(str).str.zfill(2),
-        "race_label": df["Year"].astype(str) + " · fecha " + df["RoundNumber"].astype(str),
+        "race_label": [carreras.etiqueta(a, r) for a, r in zip(df["Year"], df["RoundNumber"])],
         "driver": df["DriverId"].map(driver_code),
         "driver_id": df["DriverId"],
         "team": df["TeamId"],
@@ -353,29 +354,115 @@ def lane_paths(table: pd.DataFrame, grid_step: float = GRID_STEP,
     return pd.DataFrame(rows)
 
 
-def _params(table: pd.DataFrame) -> tuple[Any, Any]:
-    """Slider de avance (0 → 1) y selector de carrera, compartidos por todos los paneles."""
+def _params(table: pd.DataFrame, selector: bool = True) -> tuple[Any, Any]:
+    """Slider de avance (0 → 1) y selector de carrera, compartidos por todos los paneles.
+    `selector=False`: la carrera queda fija en la primera (sin menú)."""
     races = table[["race", "race_label"]].drop_duplicates().sort_values("race")
     # sin control visible: lo mueve el botón «Correr» (ver web/pagina.js)
     avance = alt.param(name="avance", value=0.0)
-    carrera = alt.param(name="carrera", value=races["race"].iloc[0], bind=alt.binding_select(
-        options=races["race"].tolist(), labels=races["race_label"].tolist(), name="Carrera "))
+    bind = {"bind": alt.binding_select(
+        options=races["race"].tolist(), labels=races["race_label"].tolist(),
+        name="Carrera ")} if selector else {}
+    carrera = alt.param(name="carrera", value=races["race"].iloc[0], **bind)
     return avance, carrera
+
+
+MARCA = "#E10600"   # rojo de la página: las marcas que señalan qué mirar
+DIM = 0.35           # opacidad de los pilotos que las marcas no nombran (autos, estelas, logos)
+DIM_TEXTO = 0.7      # la de sus textos: se apagan menos para que se sigan leyendo
+X_FIN_COMPACTO = 1.385   # borde derecho de la fila del resultado en la versión angosta
+X_DOM_COMPACTO = (-0.34, 1.40)   # versión angosta: más lugar a los costados para letras grandes
+LETRA_COMPACTO = 1.35            # versión angosta: letras más grandes (se ve achicada en notebook)
+
+
+def _marcas(t: pd.DataFrame, marcas: list[dict], *, unit: float, px: float, car_px: float,
+            xy: dict, x_scale: Any, y_scale: Any, arrive: str, x_fin: float,
+            fs: float = 1.0, x_grid: float = -0.02) -> list:
+    """Recuadros rojos con su número sobre lo que explica cada nota de una carrera guiada (el
+    texto de la nota va en la página, en HTML). Cada marca: `{"n": 1, "driver": "LEC" o una
+    lista, "donde": "llegada" | "final" | "largada" | "grupo"}`:
+
+    - llegada: el auto al llegar; el número a la derecha de la sigla (a la izquierda si llega
+      pegado a la meta);
+    - final: la fila del resultado real; grupo: varias filas juntas (los que abandonaron);
+    - largada: la fila de LARGADA (se ve también mientras corren los autos).
+
+    Se prenden con los parámetros `paso_min` y `paso` (los mueve web/pagina.js según el grupo
+    de notas que se está leyendo): las del grupo a pleno, las anteriores tenues, las siguientes
+    apagadas. Con `foco` (la tarjeta señalada con el mouse o el teclado), solo la suya a pleno.
+    """
+    if not marcas:
+        return []
+    fila = t.set_index("driver")
+    filas = []
+    for m in marcas:
+        n, donde = m["n"], m["donde"]
+        if donde == "grupo":
+            ys = fila.loc[list(m["driver"]), "final"].astype(float)
+            filas.append(dict(n=n, x0=1.0, x1=x_fin, y0=ys.min() - 0.45, y1=ys.max() + 0.45,
+                              bx=0.972, by=float(ys.mean()), siempre=0))
+            continue
+        f = fila.loc[m["driver"]]
+        if donde == "llegada":
+            x, y = X_END - float(f["behind"]) * unit, float(f["pred_pos"])
+            w = car_px * 0.68
+            # el número, después de la sigla (antes si llega pegado a la meta)
+            dx = car_px / 2 + 52 * fs if f["behind"] >= 2 else -(car_px / 2 + 72 * fs)
+            filas.append(dict(n=n, x0=x - w * px, x1=x + w * px, y0=y - 0.42, y1=y + 0.42,
+                              bx=x + dx * px, by=y, siempre=0))
+        elif donde == "largada":
+            y = float(f["grid"])
+            filas.append(dict(n=n, x0=x_grid - 76 * fs * px, x1=x_grid + 6 * px, y0=y - 0.4,
+                              y1=y + 0.4, bx=x_grid + 22 * px, by=y, siempre=1))
+        else:
+            y = float(f["final"])
+            filas.append(dict(n=n, x0=1.0, x1=x_fin, y0=y - 0.45, y1=y + 0.45, bx=0.972, by=y,
+                              siempre=0))
+    sx, sy = dict(scale=x_scale, axis=None), dict(scale=y_scale, axis=None)
+    base = alt.Chart(pd.DataFrame(filas)).transform_calculate(
+        op=(f"(datum.n >= paso_min && datum.n <= paso ? (foco > 0 && datum.n != foco ? 0.3 : 1)"
+            f" : datum.n < paso_min ? 0.3 : 0) * (datum.siempre ? 1 : {arrive})"))
+    op = alt.Opacity("op:Q", scale=None)
+    return [
+        base.mark_rect(fillOpacity=0, stroke=MARCA, strokeWidth=2.5, cornerRadius=4).encode(
+            x=alt.X("x0:Q", **sx), x2="x1:Q", y=alt.Y("y0:Q", **sy), y2="y1:Q", opacity=op),
+        base.mark_circle(size=480, color=MARCA, stroke="#FFFFFF", strokeWidth=1.5,
+                         opacity=1).encode(x=alt.X("bx:Q", **sx), y=alt.Y("by:Q", **sy),
+                                           opacity=op),
+        base.mark_text(color="#FFFFFF", fontSize=13, fontWeight="bold").encode(
+            x=alt.X("bx:Q", **sx), y=alt.Y("by:Q", **sy), text="n:N", opacity=op),
+    ]
 
 
 def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, threshold: float,
            width: int, row_height: int, model_name: str, grid_step: float, change: float,
-           max_behind: float) -> tuple[alt.LayerChart, dict[str, Any]]:
+           max_behind: float, marcas: list[dict] | None = None,
+           compacto: bool = False, letra: float | None = None) -> tuple[alt.LayerChart, dict[str, Any]]:
     """Un panel (pista completa) sin parámetros ni configuración. `t` trae las columnas de la
-    versión a dibujar (original o `adjusted_view`). Devuelve el panel y su dataset con nombre."""
+    versión a dibujar (original o `adjusted_view`). Devuelve el panel y su dataset con nombre.
+
+    `marcas` (ver `_marcas`; carreras guiadas): recuadros numerados que se prenden con el
+    parámetro `paso`; con marcas, al llegar se apagan los pilotos que no nombran.
+    `compacto`: versión angosta (sin logos ni las columnas Δ y MEJORA) para pantallas chicas."""
     n_max = int(t.groupby("race").size().max())
     height = row_height * n_max
-    x_dom = (-0.30, 1.69)
+    # carreras guiadas con letra grande (versión completa): más lugar a la izquierda para la
+    # columna LARGADA, y sin el logo del resultado (chocaba con el texto)
+    grande = bool(letra) and not compacto
+    x_dom = X_DOM_COMPACTO if compacto else ((-0.36, 1.71) if grande else (-0.30, 1.69))
+    # escala de las letras: `letra` si se pide (carreras guiadas, que se ven achicadas)
+    fs = letra if letra else (LETRA_COMPACTO if compacto else 1.0)
+    x_grid = -0.07 if compacto else -0.02                    # borde derecho de la columna LARGADA
+    px = (x_dom[1] - x_dom[0]) / width                       # un píxel en unidades de x
+    nombrados = {d for m in (marcas or [])
+                 for d in (m["driver"] if isinstance(m["driver"], list) else [m["driver"]])}
+    apagado = bool(marcas) & ~t["driver"].isin(nombrados)
+    t = t.assign(dim=np.where(apagado, DIM, 1.0), dim_txt=np.where(apagado, DIM_TEXTO, 1.0))
     y_scale = alt.Scale(domain=[0.4, n_max + 0.6], reverse=True, nice=False, zero=False)
     x_scale = alt.Scale(domain=list(x_dom), nice=False, zero=False)
     no_axis = dict(axis=None)
     car_px = row_height * 1.45                               # largo del auto en píxeles
-    half_car = car_px / 2 / width * (x_dom[1] - x_dom[0])    # medio auto en unidades de x
+    half_car = car_px / 2 * px                               # medio auto en unidades de x
     unit = FIELD_SPAN / max_behind                           # 1 puesto en unidades de x
     lead_start = X_LEFT + (n_max - 1) * grid_step * unit     # líder al largar
 
@@ -383,10 +470,15 @@ def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, thresho
     tt = "clamp(avance,0,1)"
     lead = f"({lead_start} + {tt} * {X_END - lead_start})"
     arrive = f"clamp(({tt} - 0.95) / 0.05, 0, 1)"   # solo en el último 5% del avance
+    apaga = f"(1 - (1 - datum.dim) * {arrive})"      # 1 hasta llegar; `dim` al llegar
+    apaga_txt = f"(1 - (1 - datum.dim_txt) * {arrive})"   # lo mismo para los textos
 
     xy = dict(x=alt.X("x:Q", scale=x_scale, **no_axis), y=alt.Y("y:Q", scale=y_scale, **no_axis))
     base = alt.Chart(t[["race", "race_label", "driver", "team", "color", "grid", "pred_pos",
-                        "final", "dnf", "mae_model", "mae_grid", "grid_ref"]]).transform_filter(in_race)
+                        "final", "dnf", "mae_model", "mae_grid", "grid_ref", "dim", "dim_txt"]]
+                     ).transform_filter(in_race).transform_calculate(apaga=apaga, apaga_txt=apaga_txt)
+    tenue = alt.Opacity("apaga:Q", scale=None)
+    tenue_txt = alt.Opacity("apaga_txt:Q", scale=None)
 
     # Carriles de la pista (uno por posición).
     lanes = alt.Chart(pd.DataFrame({"y": np.arange(1, n_max + 1)})).mark_rule(
@@ -412,26 +504,29 @@ def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, thresho
         label="datum.k % 5 == 0 ? (datum.k == 0 ? 'líder' : '−' + datum.k) : ''"
     ).transform_filter(f"datum.x >= {X_LEFT}")   # solo sobre la pista
     ruler_ticks = ruler.mark_rule(color=INK_MUTED, strokeWidth=1).encode(y2="y2:Q", **xy)
-    ruler_txt = ruler.mark_text(color=INK_MUTED, fontSize=11, dy=-7).encode(text="label:N", **xy)
+    ruler_txt = ruler.mark_text(color=INK_MUTED, fontSize=11 * fs, dy=-7).encode(
+        text="label:N", **xy)
 
     # Columnas de texto: largada (izquierda) y resultado real (derecha).
-    grid_txt = base.transform_calculate(x="-0.02", y="datum.grid", label=(
+    grid_txt = base.transform_calculate(x=f"{x_grid}", y="datum.grid", label=(
         "'P' + datum.grid + '  ' + datum.driver")).mark_text(
-        align="right", color=INK, fontSize=14, font="monospace").encode(text="label:N", **xy)
+        align="right", color=INK, fontSize=14 * fs, font="monospace").encode(
+        text="label:N", opacity=tenue_txt, **xy)
     final_txt = base.transform_calculate(x="1.03", y="datum.final", label=(
         "'P' + datum.final + '  ' + datum.driver + (datum.dnf ? '  ✕' : '')")).mark_text(
-        align="left", color=INK, fontSize=14, font="monospace").encode(text="label:N", **xy)
+        align="left", color=INK, fontSize=14 * fs, font="monospace").encode(
+        text="label:N", opacity=tenue_txt, **xy)
     # Logo de la escudería al lado de la largada y del resultado real.
     con_logo = base.transform_lookup(
         lookup="team", from_=alt.LookupData(logos.tabla(t["team"]), "team", ["logo"])
     ).transform_filter("datum.logo != ''")
     logo_px = dict(width=row_height * 1.25, height=row_height * 0.7)
-    grid_logo = con_logo.transform_calculate(x="-0.245", y="datum.grid").mark_image(
-        **logo_px).encode(url="logo:N", **xy)
+    grid_logo = con_logo.transform_calculate(x=f"{-0.30 if grande else -0.245}", y="datum.grid").mark_image(
+        **logo_px).encode(url="logo:N", opacity=tenue, **xy)
     final_logo = con_logo.transform_calculate(x="1.29", y="datum.final").mark_image(
-        **logo_px).encode(url="logo:N", **xy)
+        **logo_px).encode(url="logo:N", opacity=tenue, **xy)
     final_chip = base.transform_calculate(x="1.01", y="datum.final").mark_square(
-        size=60).encode(color=alt.Color("color:N", scale=None), **xy)
+        size=60).encode(color=alt.Color("color:N", scale=None), opacity=tenue, **xy)
 
     # Al lado del final real (aparecen al llegar): puestos ganados (+) o perdidos (−) respecto de
     # la grilla y del modelo, y cuánto mejora (▲) o empeora (▼) el modelo a la grilla en ese
@@ -442,7 +537,7 @@ def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, thresho
         y="datum.final", dg="datum.grid_ref - datum.final", dm="datum.pred_pos - datum.final",
     ).transform_calculate(
         pct="(abs(datum.dg) - abs(datum.dm)) / datum.n",
-        dg_txt=signed.format("dg"), dm_txt=signed.format("dm"), op=arrive,
+        dg_txt=signed.format("dg"), dm_txt=signed.format("dm"), op=f"{arrive} * datum.apaga_txt",
     ).transform_calculate(
         pct_txt=("(datum.pct > 0 ? '▲ ' : datum.pct < 0 ? '▼ ' : '= ') + "
                  "format(abs(datum.pct), '.0%')"),
@@ -460,7 +555,8 @@ def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, thresho
             x=f"{X_PCT}").mark_text(align="right", color=color, fontSize=13,
                                      font="monospace").encode(
             text="pct_txt:N", opacity=fade, **xy)
-          for name, color in [("mejor", C.MEJOR_TEXTO), ("peor", BAD), ("neutro", INK_MUTED)]],
+          # ▲ azul (mejor el modelo) y ▼ ámbar oscuro (mejor la grilla): los colores de la página
+          for name, color in [("mejor", C.MODELO), ("peor", "#8A4A06"), ("neutro", INK_MUTED)]],
     ]
 
     # Recorridos: puntos ya pasados + el punto actual (interpolado entre el anterior y el
@@ -480,8 +576,11 @@ def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, thresho
         y_prev="isValid(datum.y_prev) ? datum.y_prev : datum.y",
     ).transform_filter(f"datum.s_prev <= {tt}").transform_lookup(
         lookup="key", from_=alt.LookupData(per_car[["key", "driver", "g", "behind", "color",
-                                                    "crash_s"]], "key",
-                                           ["driver", "g", "behind", "color", "crash_s"])
+                                                    "crash_s", "dim", "dim_txt"]], "key",
+                                           ["driver", "g", "behind", "color", "crash_s", "dim",
+                                            "dim_txt"])
+    ).transform_calculate(
+        apaga=apaga, apaga_txt=apaga_txt,
     ).transform_calculate(
         head=f"datum.s > {tt} || (datum.s >= 1 && {tt} >= 1)",
         se=f"min(datum.s, {tt})",
@@ -493,8 +592,10 @@ def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, thresho
         x=(f"({lead_start} + datum.sx * {X_END - lead_start}) - ({grid_step} * datum.g + "
            f"{ease_s} * (datum.behind - {grid_step} * datum.g)) * {unit}"),
     )
-    trail = moving.mark_line(strokeWidth=2.5, opacity=0.45, interpolate="linear").encode(
-        detail="driver:N", order="se:Q", color=alt.Color("color:N", scale=None), **xy)
+    trail = moving.transform_calculate(op_estela="0.45 * datum.apaga").mark_line(
+        strokeWidth=2.5, interpolate="linear").encode(
+        detail="driver:N", order="se:Q", color=alt.Color("color:N", scale=None),
+        opacity=alt.Opacity("op_estela:Q", scale=None), **xy)
 
     info = ["driver_id", "team", "grid_official", "score", "pred_pos", "final_official",
             "status", "gap_ahead"]
@@ -505,7 +606,7 @@ def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, thresho
         crashed=f"{tt} >= datum.crash_s",
         gap_txt="isValid(datum.gap_ahead) ? format(datum.gap_ahead, '.2f') + ' puestos' : '—'",
         gap_lbl="isValid(datum.gap_ahead) ? '+' + format(datum.gap_ahead, '.2f') : ''",
-        op=arrive,
+        op=f"{arrive} * datum.apaga_txt",
     ).transform_calculate(
         fill=f"datum.crashed ? '{CRASH_GRAY}' : datum.color",
         name="datum.crashed ? datum.driver + ' ✕' : datum.driver",
@@ -520,20 +621,26 @@ def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, thresho
         alt.Tooltip("gap_txt:N", title="Distancia al de adelante"),
     ]
     wheels = cars_data.mark_point(shape=CAR_WHEELS, size=car_px ** 2, filled=True,
-                                  fill="#0D0D0D", stroke=None, opacity=1).encode(**xy)
+                                  fill="#0D0D0D", stroke=None).encode(opacity=tenue, **xy)
     cars = cars_data.mark_point(shape=CAR_BODY, size=car_px ** 2, filled=True,
-                                opacity=1, stroke=INK, strokeWidth=0.8).encode(
-        fill=alt.Fill("fill:N", scale=None), tooltip=tooltip, **xy)
-    car_txt = cars_data.mark_text(align="left", dx=car_px / 2 + 4, color=INK, fontSize=13,
-                                  fontWeight="bold").encode(text="name:N", **xy)
+                                stroke=INK, strokeWidth=0.8).encode(
+        fill=alt.Fill("fill:N", scale=None), tooltip=tooltip, opacity=tenue, **xy)
+    # La sigla va a la derecha del auto; la del líder, a la izquierda (a la derecha está la meta
+    # y se cortaba). El líder no tiene distancia al de adelante, así que ahí hay lugar.
+    car_txt = alt.layer(*[
+        cars_data.transform_filter(filtro).mark_text(
+            align=a, dx=d * (car_px / 2 + 4), color=INK, fontSize=13 * fs, fontWeight="bold"
+        ).encode(text="name:N", opacity=tenue_txt, **xy)
+        for filtro, a, d in [("datum.behind > 0.05", "left", 1), ("datum.behind <= 0.05", "right", -1)]])
     # Intervalo con el de adelante, detrás de cada auto (aparece al llegar).
     gap_txt = cars_data.mark_text(align="right", dx=-car_px / 2 - 4, color=INK,
-                                  fontSize=12).encode(
+                                  fontSize=12 * fs).encode(
         text="gap_lbl:N", opacity=alt.Opacity("op:Q", scale=None), **xy)
 
     # Al llegar: línea punteada del carril predicho al resultado real (largo = error).
     error_line = base.transform_calculate(
-        x=f"{x_lines}", y="datum.pred_pos", x2="1.0", y2="datum.final", op=arrive,
+        x=f"{x_lines}", y="datum.pred_pos", x2="1.0", y2="datum.final",
+        op=f"{arrive} * datum.apaga",
     ).mark_rule(color=INK_MUTED, strokeDash=[3, 3], strokeWidth=1).encode(
         x2="x2:Q", y2="y2:Q", opacity=alt.Opacity("op:Q", scale=None), **xy)
 
@@ -542,7 +649,9 @@ def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, thresho
     doubt = alt.Chart(pairs).transform_filter(in_race).transform_calculate(
         x=f"{X_END} - datum.behind_b * {unit} - {half_car * 1.1}",
         x2=f"{X_END} - datum.behind_a * {unit} + {half_car * 1.1}",
-        y="datum.lane_a - 0.42", y2="datum.lane_b + 0.42", op=f"0.25 * {arrive}",
+        # en las carreras guiadas, las franjas también se apagan: no las explica ninguna nota
+        y="datum.lane_a - 0.42", y2="datum.lane_b + 0.42",
+        op=f"0.25 * {arrive}" + (f" * {DIM}" if marcas else ""),
     ).mark_rect(fill=DOUBT, stroke=DOUBT, strokeWidth=1, cornerRadius=4).encode(
         x=alt.X("x:Q", scale=x_scale, **no_axis), x2="x2:Q",
         y=alt.Y("y:Q", scale=y_scale, **no_axis), y2="y2:Q",
@@ -551,12 +660,16 @@ def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, thresho
                  alt.Tooltip("gap:Q", title="Distancia (puestos)")])
 
     # Encabezados de columna y marcador de carrera + errores (MAE) al llegar.
-    head = pd.DataFrame({"x": [-0.02, (X_LEFT + X_END) / 2, 1.03, X_DG, X_DM, X_PCT],
-                         "label": ["LARGADA", f"PREDICCIÓN ({model_name})", "FINAL REAL",
+    head = pd.DataFrame({"x": [x_grid, (X_LEFT + X_END) / 2, 1.03, X_DG, X_DM, X_PCT],
+                         "label": ["LARGADA", "PREDICCIÓN DEL MODELO", "FINAL REAL",
                                    "Δ GRILLA", "Δ MODELO", "MEJORA"],
                          "align": ["right", "center", "left", "right", "right", "right"]})
+    if compacto:
+        head = head.iloc[:3]
     headers = alt.layer(*[
-        alt.Chart(head.iloc[[i]]).mark_text(align=a, color=INK_MUTED, fontSize=12,
+        # (Δ y MEJORA, en columnas angostas: con la letra de las guiadas se tocaban)
+        alt.Chart(head.iloc[[i]]).mark_text(align=a, color=INK_MUTED,
+                                            fontSize=12 * (fs if i < 3 else min(fs, 1.05)),
                                             fontWeight="bold", dy=-row_height * 1.0).encode(
             x=alt.X("x:Q", scale=x_scale, **no_axis), y=alt.value(0), text="label:N")
         for i, a in enumerate(head["align"])])
@@ -565,26 +678,45 @@ def _panel(t: pd.DataFrame, *, adjusted: bool, dataset: str, title: str, thresho
     mae_lbl += (" + format(datum.mae_grid, '.2f') + '  (' + (datum.mae_model <= datum.mae_grid ? "
                 "'mejora ' : 'empeora ') + format(abs(datum.mae_grid - datum.mae_model) / "
                 "datum.n, '.1%') + ' de los puestos)'")
+    guiada = bool(marcas) or compacto
+    if guiada:   # carreras guiadas: solo la carrera y, al llegar, los dos errores (con coma)
+        coma = "replace(format(datum.{0}, '.2f'), '.', ',')"
+        mae_lbl = ("'error del modelo ' + " + coma.format("mae_model")
+                   + " + '  ·  de la grilla ' + " + coma.format("mae_grid"))
     summary = base.transform_aggregate(
         mae_model="mean(mae_model)", mae_grid="mean(mae_grid)", n="count()",
         groupby=["race_label"]
     ).transform_calculate(
-        label=(f"datum.race_label + '   ·   avance ' + format({tt}, '.0%') + "
-               f"(avance >= 0.999 ? '   ·   ' + {mae_lbl} : '')")
+        label=(f"datum.race_label + ({tt} >= 0.999 ? '  ·  ' + {mae_lbl} : '')" if guiada else
+               f"datum.race_label + '   ·   avance ' + format({tt}, '.0%') + "
+               f"({tt} >= 0.999 ? '   ·   ' + {mae_lbl} : '')")
     ).mark_text(align="left", color=INK, fontSize=15, dy=-row_height * 1.8).encode(
         x=alt.value(0), y=alt.value(0), text="label:N")
 
+    # Recuadros numerados de las carreras guiadas (el texto de cada nota va en la página).
+    marks = _marcas(t, marcas or [], unit=unit, px=px, car_px=car_px, xy=xy, x_scale=x_scale,
+                    y_scale=y_scale, arrive=arrive,
+                    x_fin=X_FIN_COMPACTO if compacto else X_PCT + 8 * px, fs=fs, x_grid=x_grid)
+
+    columnas = [] if compacto else ([grid_logo, *diff_cols] if grande else [grid_logo, final_logo, *diff_cols])
+    # En las carreras guiadas, el título, la carrera y los errores van en la página (fijos
+    # arriba del gráfico): acá queda solo la pista.
     panel = alt.layer(
         lanes, start, finish, ruler_ticks, ruler_txt, doubt, error_line, trail, grid_txt,
-        grid_logo, final_chip, final_txt, final_logo, *diff_cols, wheels, cars, car_txt, gap_txt, headers, summary,
-    ).properties(width=width, height=height, title=alt.Title(
-        title, anchor="start", color=INK, fontSize=16, offset=row_height * 1.8))
+        final_chip, final_txt, *columnas, wheels, cars, car_txt, gap_txt, headers,
+        *([] if guiada else [summary]), *marks,
+    ).properties(width=width, height=height)
+    if not guiada:
+        panel = panel.properties(title=alt.Title(
+            title, anchor="start", color=INK, fontSize=16, offset=row_height * 1.8,
+            **({"subtitle": _SUBTITULOS[adjusted], "subtitleColor": INK_MUTED,
+                "subtitleFontSize": 13} if adjusted else {})))
     return panel, {dataset: paths[["key", "s", "y"]].to_dict("records")}
 
 
-def _configure(chart: Any) -> Any:
+def _configure(chart: Any, top: int = 16) -> Any:
     return chart.configure(
-        background=ASPHALT, padding={"left": 20, "right": 20, "top": 16, "bottom": 16}
+        background=ASPHALT, padding={"left": 20, "right": 20, "top": top, "bottom": 16}
     ).configure_view(stroke=None, fill=ASPHALT).configure_text(font=C.FUENTE)
 
 
@@ -622,12 +754,13 @@ def race_cars_chart(table: pd.DataFrame, threshold: float = 0.2, width: int = 10
 def race_cars_compare(table: pd.DataFrame, threshold: float = 0.2, width: int = 800,
                       row_height: int = 34, model_name: str = "modelo",
                       grid_step: float = GRID_STEP,
-                      change: float = LANE_CHANGE) -> alt.VConcatChart:
+                      change: float = LANE_CHANGE, selector: bool = True) -> alt.VConcatChart:
     """Las dos versiones, una arriba de la otra (así cada una usa todo el ancho y se lee bien),
     con el mismo slider y selector: arriba la
     predicción del modelo; abajo, ajustada por abandonos (los que no terminaron chocan en
-    su vuelta de abandono, quedan grises y los de abajo suben). Misma escala en ambas."""
-    avance, carrera = _params(table)
+    su vuelta de abandono, quedan grises y los de abajo suben). Misma escala en ambas.
+    `selector=False`: sin menú de carrera (para mostrar una sola, ya filtrada en `table`)."""
+    avance, carrera = _params(table, selector)
     max_behind = _max_behind(table, adjusted=True)
     common = dict(threshold=threshold, width=width, row_height=row_height,
                   model_name=model_name, grid_step=grid_step, change=change,
@@ -650,5 +783,185 @@ def race_cars_compare(table: pd.DataFrame, threshold: float = 0.2, width: int = 
     return _configure(chart)
 
 
+def race_cars_guiada(table: pd.DataFrame, *, abajo: bool, marcas: list[dict],
+                     compacto: bool = False, width: int = 1000, row_height: int = 34,
+                     letra: float | None = None,
+                     model_name: str = "modelo", threshold: float = 0.2) -> alt.LayerChart:
+    """Una pista de una carrera guiada del Sector 3 (`table`: una sola carrera): la de todos
+    (`abajo=False`) o la sin abandonos (`abajo=True`). La mueven dos parámetros que pone
+    web/pagina.js según el grupo de notas que se está leyendo: `avance` (0 = largada,
+    1 = llegada) y `paso_min`..`paso` (qué marcas se prenden). Las dos pistas usan la misma escala, así al pasar de una a
+    la otra los autos no cambian de lugar. `compacto`: la versión angosta."""
+    avance, carrera = _params(table, selector=False)
+    paso = alt.param(name="paso", value=0)
+    paso_min = alt.param(name="paso_min", value=0)
+    foco = alt.param(name="foco", value=0)   # la tarjeta señalada (0 = ninguna)
+    t = adjusted_view(table) if abajo else table
+    panel, datasets = _panel(
+        t, adjusted=abajo, dataset="lane_paths_adj" if abajo else "lane_paths",
+        title=_TITLES[abajo], threshold=threshold, width=width, row_height=row_height,
+        model_name=model_name, grid_step=GRID_STEP, change=LANE_CHANGE,
+        max_behind=_max_behind(table, adjusted=True), marcas=marcas, compacto=compacto,
+        letra=letra)
+    return _configure(panel.add_params(avance, carrera, paso, paso_min, foco).properties(
+        datasets=datasets))
+
+
+def race_cars_sim(teams: list[str], n_max: int = 22, max_behind: float = 15.0,
+                  width: int = 1000, row_height: int = 30, model_name: str = "modelo",
+                  grid_step: float = GRID_STEP) -> alt.LayerChart:
+    """La pista de «Probá el modelo»: una carrera con los valores que cargó el usuario.
+
+    Los datos los pone el navegador (web/pagina.js, en cada cambio) en dos datasets con nombre:
+
+    - `autos_sim`: un auto por fila: `driver`, `team`, `color`, `grid` (1..N), `behind`
+      (distancia al líder en puestos de puntaje, ≤ `max_behind`), `pred_pos`, `final`, `dnf`,
+      `elegido` (el piloto que se modifica) y, del elegido, `pred_antes`/`behind_antes` (con sus
+      datos reales);
+    - `recorridos_sim`: el recorrido de carril de cada auto (como `lane_paths`): `driver`, `s`,
+      `y`, `s_prev`, `y_prev`, `g` (= grid − 1), `behind`, `color`, `elegido`.
+
+    El elegido va adelante y resaltado; el resto, atenuado. En contorno, dónde lo ponía el modelo
+    con sus datos reales. `teams`: las escuderías posibles (para los logos)."""
+    avance = alt.param(name="avance", value=1.0)
+    height = row_height * n_max
+    x_dom = (-0.30, 1.30)
+    y_scale = alt.Scale(domain=[0.4, n_max + 0.6], reverse=True, nice=False, zero=False)
+    x_scale = alt.Scale(domain=list(x_dom), nice=False, zero=False)
+    no_axis = dict(axis=None)
+    xy = dict(x=alt.X("x:Q", scale=x_scale, **no_axis), y=alt.Y("y:Q", scale=y_scale, **no_axis))
+    car_px = row_height * 1.45
+    half_car = car_px / 2 / width * (x_dom[1] - x_dom[0])
+    unit = FIELD_SPAN / max_behind
+    lead_start = X_LEFT + (n_max - 1) * grid_step * unit
+    tt = "clamp(avance,0,1)"
+    lead = f"({lead_start} + {tt} * {X_END - lead_start})"
+    arrive = f"clamp(({tt} - 0.95) / 0.05, 0, 1)"
+    RESALTE = "#E10600"   # el rojo de la página (--f1-rojo)
+
+    autos = alt.Chart(alt.NamedData(name="autos_sim"))
+    lanes = alt.Chart(pd.DataFrame({"y": np.arange(1, n_max + 1)})).mark_rule(
+        color=LANE, strokeDash=[6, 6], strokeWidth=1).encode(y=alt.Y("y:Q", scale=y_scale, **no_axis))
+    start = alt.Chart(pd.DataFrame({"x": [lead_start + half_car * 1.4]})).mark_rule(
+        color=INK, strokeWidth=2, opacity=0.6).encode(x=alt.X("x:Q", scale=x_scale, **no_axis))
+    checks = pd.DataFrame([{"x": X_END + half_car + 0.085 + 0.012 * c, "y": 0.4 + 0.5 * r,
+                            "black": (r + c) % 2} for r in range(2 * n_max + 1) for c in range(2)])
+    finish = alt.Chart(checks).mark_square(size=row_height * 4, opacity=0.85).encode(
+        color=alt.Color("black:N", scale=alt.Scale(domain=[0, 1], range=["#FFFFFF", C.CARBONO]),
+                        legend=None), **xy)
+    ruler = alt.Chart(pd.DataFrame({"k": np.arange(0, int(np.ceil(max_behind)) + 1)})
+                      ).transform_calculate(
+        x=f"{lead} - datum.k * {unit}", y="0.42", y2="datum.k % 5 == 0 ? 0.62 : 0.52",
+        label="datum.k % 5 == 0 ? (datum.k == 0 ? 'líder' : '−' + datum.k) : ''"
+    ).transform_filter(f"datum.x >= {X_LEFT}")
+    ruler_ticks = ruler.mark_rule(color=INK_MUTED, strokeWidth=1).encode(y2="y2:Q", **xy)
+    ruler_txt = ruler.mark_text(color=INK_MUTED, fontSize=11, dy=-7).encode(text="label:N", **xy)
+
+    # Columnas de texto (el elegido en rojo y negrita) y logos.
+    def columna(x: str, y: str, label: str, align: str) -> list:
+        base = autos.transform_calculate(x=x, y=y, label=label)
+        return [base.transform_filter(f).mark_text(
+            align=align, fontSize=14, font="monospace", color=c, fontWeight=w).encode(
+            text="label:N", **xy)
+            for f, c, w in [("!datum.elegido", INK, "normal"), ("datum.elegido", RESALTE, "bold")]]
+    grid_txt = columna("-0.02", "datum.grid", "'P' + datum.grid + '  ' + datum.driver", "right")
+    final_txt = columna("1.03", "datum.final",
+                        "'P' + datum.final + '  ' + datum.driver + (datum.dnf ? '  ✕' : '')",
+                        "left")
+    con_logo = autos.transform_lookup(
+        lookup="team", from_=alt.LookupData(logos.tabla(sorted(set(teams))), "team", ["logo"])
+    ).transform_filter("datum.logo != ''")
+    logo_px = dict(width=row_height * 1.25, height=row_height * 0.7)
+    grid_logo = con_logo.transform_calculate(x="-0.245", y="datum.grid").mark_image(
+        **logo_px).encode(url="logo:N", **xy)
+    final_logo = con_logo.transform_calculate(x="1.24", y="datum.final").mark_image(
+        **logo_px).encode(url="logo:N", **xy)
+    final_chip = autos.transform_calculate(x="1.01", y="datum.final").mark_square(
+        size=60).encode(color=alt.Color("color:N", scale=None), **xy)
+
+    # Al llegar: línea punteada del carril predicho al resultado real (la del elegido, en rojo).
+    x_lines = X_END + half_car + 0.115
+    error_line = autos.transform_calculate(
+        x=f"{x_lines}", y="datum.pred_pos", x2="1.0", y2="datum.final",
+        op=f"{arrive} * (datum.elegido ? 1 : 0.35)",
+    ).mark_rule(strokeDash=[3, 3]).encode(
+        x2="x2:Q", y2="y2:Q", opacity=alt.Opacity("op:Q", scale=None),
+        color=alt.condition("datum.elegido", alt.value(RESALTE), alt.value(INK_MUTED)),
+        strokeWidth=alt.condition("datum.elegido", alt.value(2.5), alt.value(1)), **xy)
+
+    # Recorridos: el punto actual se interpola entre el anterior y el siguiente.
+    ease_s = "(datum.sx*datum.sx*(3-2*datum.sx))"
+    moving = alt.Chart(alt.NamedData(name="recorridos_sim")).transform_filter(
+        f"datum.s_prev <= {tt}"
+    ).transform_calculate(
+        head=f"datum.s > {tt} || (datum.s >= 1 && {tt} >= 1)",
+        sx=f"min(datum.s, {tt})",
+        y=(f"datum.s > {tt} ? datum.y_prev + ({tt} - datum.s_prev) / (datum.s - datum.s_prev)"
+           " * (datum.y - datum.y_prev) : datum.y"),
+    ).transform_calculate(
+        x=(f"({lead_start} + datum.sx * {X_END - lead_start}) - ({grid_step} * datum.g + "
+           f"{ease_s} * (datum.behind - {grid_step} * datum.g)) * {unit}"),
+    )
+
+    def capa(filtro: str, resaltado: bool) -> list:
+        m = moving.transform_filter(filtro)
+        trail = m.mark_line(strokeWidth=4 if resaltado else 2, opacity=0.85 if resaltado else 0.2,
+                            interpolate="linear").encode(
+            detail="driver:N", order="sx:Q", color=alt.Color("color:N", scale=None), **xy)
+        head = m.transform_filter("datum.head")
+        op = 1 if resaltado else 0.35
+        wheels = head.mark_point(shape=CAR_WHEELS, size=car_px ** 2, filled=True, fill="#0D0D0D",
+                                 stroke=None, opacity=op).encode(**xy)
+        cars = head.mark_point(shape=CAR_BODY, size=car_px ** 2, filled=True, opacity=op,
+                               stroke=RESALTE if resaltado else INK,
+                               strokeWidth=2.5 if resaltado else 0.8).encode(
+            fill=alt.Fill("color:N", scale=None),
+            tooltip=[alt.Tooltip("driver:N", title="Piloto")], **xy)
+        txt = head.mark_text(align="left", dx=car_px / 2 + 4, fontSize=14 if resaltado else 12,
+                             fontWeight="bold", color=RESALTE if resaltado else INK,
+                             opacity=1 if resaltado else 0.6).encode(text="driver:N", **xy)
+        return [trail, wheels, cars, txt]
+
+    # Dónde lo ponía con sus datos reales (en contorno, al llegar, si cambió algo).
+    antes = autos.transform_filter(
+        "datum.elegido && datum.behind_antes != datum.behind").transform_calculate(
+        x=f"{X_END} - datum.behind_antes * {unit}", y="datum.pred_antes", op=arrive,
+        label="'con sus datos: P' + datum.pred_antes")
+    ghost = antes.mark_point(shape=CAR_BODY, size=car_px ** 2, filled=False, stroke=RESALTE,
+                             strokeWidth=1.5, strokeDash=[3, 2]).encode(
+        opacity=alt.Opacity("op:Q", scale=None), **xy)
+    ghost_txt = antes.mark_text(align="right", dx=-car_px / 2 - 6, fontSize=12, color=RESALTE,
+                                fontStyle="italic").encode(
+        text="label:N", opacity=alt.Opacity("op:Q", scale=None), **xy)
+
+    head_df = pd.DataFrame({"x": [-0.02, (X_LEFT + X_END) / 2, 1.03],
+                            "label": ["LARGADA", "PREDICCIÓN CON TUS VALORES",
+                                      "FINAL REAL"],
+                            "align": ["right", "center", "left"]})
+    headers = alt.layer(*[
+        alt.Chart(head_df.iloc[[i]]).mark_text(align=a, color=INK_MUTED, fontSize=12,
+                                               fontWeight="bold", dy=-row_height * 1.0).encode(
+            x=alt.X("x:Q", scale=x_scale, **no_axis), y=alt.value(0), text="label:N")
+        for i, a in enumerate(head_df["align"])])
+    summary = autos.transform_filter("datum.elegido").transform_calculate(
+        label=(f"datum.driver + ': largada P' + datum.grid + '   ·   avance ' + format({tt}, '.0%')"
+               " + (avance >= 0.999 ? '   ·   predicción P' + datum.pred_pos + "
+               "(datum.pred_antes != datum.pred_pos ? ' (con sus datos reales, P' + "
+               "datum.pred_antes + ')' : '') + '   ·   terminó P' + datum.final + "
+               "(datum.dnf ? ' (no terminó)' : '') : '')")
+    ).mark_text(align="left", color=INK, fontSize=15, dy=-row_height * 1.8).encode(
+        x=alt.value(0), y=alt.value(0), text="label:N")
+
+    chart = alt.layer(
+        lanes, start, finish, ruler_ticks, ruler_txt, error_line, *grid_txt, grid_logo,
+        final_chip, *final_txt, final_logo, *capa("!datum.elegido", False), ghost, ghost_txt,
+        *capa("datum.elegido", True), headers, summary,
+    ).properties(width=width, height=height).add_params(avance)
+    return _configure(chart, top=int(row_height * 2.4))   # lugar para la línea de resumen
+
+
 _TITLES = {False: "Predicción del modelo",
-           True: "Ajustada por abandonos (usa el resultado real)"}
+           True: "Sin los que abandonaron"}
+# La versión sin abandonos ya usa el resultado: se aclara debajo del título.
+_SUBTITULOS = {False: "", True: "Esto ya usa el resultado (quién abandonó se sabe después de la "
+                                "carrera): no es una predicción."}

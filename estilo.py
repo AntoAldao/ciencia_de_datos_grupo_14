@@ -61,12 +61,17 @@ def _color(team: str) -> str:
     return C.ESCUDERIAS.get(team, C.ESCUDERIA_DEFECTO)
 
 
-def menu(recorrido: list[str], explorar: list[tuple[str, str, str]]) -> str:
-    """Menú lateral: el objetivo, el recorrido (los tres sectores, en orden) y las partes para
-    explorar por tu cuenta. Los nombres son para el usuario, no la estructura del relato."""
+def menu(recorrido: list[str], explorar: list[tuple[str, str, str]],
+         subpartes: dict[int, list[tuple[str, str]]] | None = None) -> str:
+    """Menú lateral: la pregunta, el recorrido (los tres sectores, en orden, con el número de
+    su título; `subpartes`: entradas debajo de un sector, (texto, ancla)) y las partes para
+    explorar por tu cuenta. Cada rótulo es una versión corta del título al que lleva."""
+    subpartes = subpartes or {}
     pasos_tallo = "".join(
         f'<a class="f1-nav-item" href="#seccion-{i}"><img src="{_rueda(i, 64)}" alt="">'
         f'<span><small>Sector {i}</small>{html.escape(t)}</span></a>'
+        + "".join(f'<a class="f1-nav-item sub" href="#{ancla}"><span>{html.escape(texto)}</span></a>'
+                  for texto, ancla in subpartes.get(i, []))
         for i, t in enumerate(recorrido, start=1))
     pasos_explorar = "".join(   # (texto, ancla, ícono): cada uno lleva a su propia sección
         f'<a class="f1-nav-item explorar" href="#{ancla}"><i>{icono}</i>'
@@ -75,7 +80,7 @@ def menu(recorrido: list[str], explorar: list[tuple[str, str, str]]) -> str:
         f'<nav class="f1-nav" aria-label="Índice">'
         f'<a class="f1-nav-logo" href="#portada"><img src="{_data_uri(ASSETS / "logo.svg")}" '
         f'alt="Fórmula 1"><b>Grupo 14</b></a>'
-        f'<a class="f1-nav-item portada" href="#portada"><i>🏁</i><span>El objetivo</span></a>'
+        f'<a class="f1-nav-item portada" href="#portada"><i>🏁</i><span>La pregunta</span></a>'
         f'<div class="f1-nav-parte"><b>El recorrido</b><span>de los datos al modelo</span></div>'
         f'<div class="f1-nav-grupo">{pasos_tallo}</div>'
         f'<div class="f1-nav-parte"><b>Explorá por tu cuenta</b><span>temporadas, carreras y el modelo</span></div>'
