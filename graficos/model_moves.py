@@ -27,6 +27,7 @@ import altair as alt
 import numpy as np
 import pandas as pd
 
+from graficos import carreras
 from graficos import colores as C
 
 from graficos.race_cars import ASPHALT, INK, INK_MUTED, LANE, RACE_COLS, driver_code
@@ -125,7 +126,7 @@ def contributions(aportes: pd.DataFrame, rows: pd.DataFrame) -> pd.DataFrame:
     final = rows.groupby(RACE_COLS)["RACE_Position"].rank(method="first").astype(int)
     info = pd.DataFrame({
         "race": rows["Year"].astype(str) + "-" + rows["RoundNumber"].astype(str).str.zfill(2),
-        "race_label": rows["Year"].astype(str) + " · fecha " + rows["RoundNumber"].astype(str),
+        "race_label": [carreras.etiqueta(a, r) for a, r in zip(rows["Year"], rows["RoundNumber"])],
         "driver": rows["DriverId"].map(driver_code),
         "driver_id": rows["DriverId"],
         "grid": grid.astype(int),

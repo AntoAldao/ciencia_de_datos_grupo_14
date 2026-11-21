@@ -33,7 +33,7 @@
 .f1-nav-parte { display: flex; flex-direction: column; margin: 16px 6px 4px; line-height: 1.2; }
 .f1-nav-parte b {
   font-size: .8rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
-  color: var(--f1-rojo);
+  color: #B30500;   /* el rojo de la marca, más oscuro: 5:1 sobre el fondo del menú */
 }
 .f1-nav-parte span { font-size: .85rem; color: var(--f1-tinta-suave); }
 /* El recorrido: una línea que une los sectores (se lee en orden); explorá: un panel aparte */
@@ -59,6 +59,8 @@
   color: var(--f1-tinta-suave);
 }
 .f1-nav-item.portada { margin-left: 6px; }
+/* subentrada de un sector (sin rueda): más chica y corrida a la altura del texto del sector */
+.f1-nav-item.sub { padding: 4px 10px 6px 56px; font-size: .9rem; font-weight: 500; color: var(--f1-tinta-suave) !important; }
 
 /* ---------- Encabezado ---------- */
 .f1-hero {
@@ -96,14 +98,14 @@
 /* Banda de escuderías: decorativa (no se puede tocar). Logos con sus colores originales y,
    debajo de cada uno, una línea con el color de identidad del equipo (el mismo de los autos). */
 .f1-parrilla {
-  display: flex; align-items: stretch; flex-wrap: wrap;
+  display: flex; align-items: stretch; flex-wrap: nowrap;   /* todos los logos en un renglón */
   margin: 0 0 2rem; padding: 14px 10px 0;
   background: #FFFFFF; border: 1px solid var(--f1-borde); border-radius: 0 0 10px 10px;
   box-shadow: var(--f1-sombra);
   pointer-events: none; user-select: none; cursor: default;
 }
 .f1-escuderia {
-  flex: 1 1 90px; min-width: 70px; height: 60px; padding: 0 10px 14px;
+  flex: 1 1 0; min-width: 0; height: 60px; padding: 0 8px 14px;
   display: flex; align-items: center; justify-content: center; position: relative;
 }
 .f1-escuderia::after {
@@ -147,7 +149,9 @@ h1 { font-style: italic; letter-spacing: -.01em; line-height: 1.1 !important; co
   animation: f1-girar 1.2s cubic-bezier(.2, .7, .2, 1) both;
 }
 .f1-seccion h2 {
-  margin: 0; padding: 0 200px 0 0; font-size: 2.25rem; font-weight: 700; line-height: 1.2;
+  /* usa el ancho: el circuito de atrás es una marca de agua tenue y puede quedar debajo */
+  margin: 0; padding: 0 40px 0 0; font-size: 2.25rem; font-weight: 700; line-height: 1.2;
+  position: relative;
   color: var(--f1-tinta);
 }
 @keyframes f1-girar { from { transform: rotate(-200deg); opacity: 0; } to { transform: none; opacity: 1; } }

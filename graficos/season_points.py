@@ -22,6 +22,7 @@ from __future__ import annotations
 import altair as alt
 import pandas as pd
 
+from graficos import carreras
 from graficos import colores as C
 
 from graficos.race_cars import ASPHALT, INK, INK_MUTED, LANE
@@ -111,9 +112,10 @@ def points_chart(points: pd.DataFrame, width: int = 860, height: int = 380,
                                  value=[{"driver": leader}], clear=False)
     axis = dict(labelColor=INK_MUTED, titleColor=INK_MUTED, gridColor=LANE, domainColor=LANE,
                 tickColor=LANE)
-    x = alt.X("round:Q", title="Fecha", scale=alt.Scale(domain=[1, int(points["round"].max())],
-                                                       nice=False),
-              axis=alt.Axis(tickMinStep=1, format="d", **axis))
+    rondas = list(range(1, int(points["round"].max()) + 1))
+    x = alt.X("round:Q", title="Gran Premio", scale=alt.Scale(domain=[1, rondas[-1]], nice=False),
+              axis=alt.Axis(values=rondas, labelAngle=-40, labelAlign="right",
+                            labelExpr=carreras.eje(year, rondas), **axis))
     y = alt.Y("cum_pts:Q", title="Puntos acumulados", axis=alt.Axis(**axis))
     tooltip = [alt.Tooltip("driver_id:N", title="Piloto"), alt.Tooltip("team:N", title="Equipo"),
                alt.Tooltip("scenario:N", title="Escenario"),

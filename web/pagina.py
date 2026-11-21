@@ -27,7 +27,7 @@ import numpy as np
 import pandas as pd
 
 import estilo
-from graficos import model_moves, panorama, pasos, race_cars, race_errors, season_points, tallo
+from graficos import carreras, logos, model_moves, pasos, race_cars, race_errors, season_points, tallo
 
 RAIZ = Path(__file__).resolve().parent.parent
 WEB = Path(__file__).resolve().parent
@@ -43,6 +43,7 @@ FUENTE_URL = ("https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@
 
 # ---- constantes de la aplicación ----------------------------------------------------------------
 ANIO_TEST = 2026
+CARRERAS_GUIADAS = (4, 13)   # fechas del test que el Sector 3 recorre con texto (los textos las nombran)
 FECHA_DATOS = "11/11/2026"
 PIPELINE = "https://github.com/AntoAldao/ciencia_de_datos_grupo_14/tree/main/pipeline"
 CONTROLES = [   # (columna, etiqueta, paso, decimales)
@@ -55,8 +56,9 @@ CONTROLES = [   # (columna, etiqueta, paso, decimales)
     ("FP_Desgaste_SOFT", "Desgaste con blanda: vuelta promedio vs. mejor (%)", 0.05, 2),
     ("FP_Desgaste_MED", "Desgaste con media: vuelta promedio vs. mejor (%)", 0.05, 2),
 ]
-RECORRIDO = ["Los datos", "Lo que encontramos", "El modelo"]   # el menú lateral
-EXPLORAR = [("Todas las carreras", "todas-las-carreras", "⌕"),   # (texto, ancla, ícono)
+# el menú lateral: versiones cortas de los títulos de cada sector («{n}»: columnas del pipeline)
+RECORRIDO = ["Los datos: de {n} a 8", "La largada y los abandonos", "El modelo contra la grilla"]
+EXPLORAR = [("Todos los pilotos", "todos-los-pilotos", "⌕"),   # (texto, ancla, ícono)
             ("Una temporada", "una-temporada", "▤"),
             ("Probá el modelo", "proba-el-modelo", "⚙")]
 PESTANIAS = [("errores", "Error por carrera"), ("campeonato", "Campeonato"),
@@ -122,6 +124,91 @@ def grafico(nombre: str) -> str:
     return f'<div class="grafico" data-spec="{nombre}"><div class="vista"></div></div>'
 
 
+def carrera_animada(nombre: str) -> str:
+    """Una carrera animada con sus botones «Correr» y «Volver a la largada» (los conecta
+    pagina.js cuando la dibuja)."""
+    return (f'<div class="grafico autos" data-spec="{nombre}"><div class="controles-autos">'
+            '<button class="correr" type="button">Correr</button>'
+            '<button class="largada" type="button">Volver a la largada</button>'
+            '<span class="pista">Arriba, con todos los pilotos; abajo, sin los que abandonaron.'
+            '</span></div><div class="marco"><div class="vista"></div></div></div>')
+
+
+def como_leer(items: list[tuple[str, str, bool]], clase: str = "", plegado: bool = False) -> str:
+    """Cómo leer el gráfico de las carreras guiadas, todo junto. `items`: (título, texto,
+    solo en la versión completa del gráfico). `plegado`: en una línea que se despliega (para
+    la segunda carrera, que ya se leyó la primera)."""
+    lista = ("<dl>" + "".join(f'<div{" class=solo-completo" if solo else ""}><dt>{html.escape(t)}'
+                              f"</dt><dd>{md(d)}</dd></div>" for t, d, solo in items) + "</dl>")
+    if plegado:
+        return (f'<details class="como-leer {clase} plegada"><summary>Cómo leer el gráfico'
+                f"</summary>{lista}</details>")
+    return f'<div class="como-leer {clase}"><h4>Cómo leer el gráfico</h4>{lista}</div>'
+
+
+def carrera_guiada(ronda: int, grupos: list[tuple], resumen: str,
+                   leyenda: list[tuple[str, str, bool]], descripciones: dict[str, str],
+                   titulo: str, pistas: dict[str, tuple[str, str]], filas: int,
+                   leyenda_plegada: bool = False, salida: str = "",
+                   destino_salida: str = "", ganador: str = "", orden: str = "") -> str:
+    """Una carrera guiada (scrollytelling). El escenario (un fondo fijo que tapa la pantalla
+    mientras dura la carrera) lleva a la izquierda el panel: título, en qué parada se está (y un
+    link para saltear), las dos pistas con sus errores (se resalta la que se ve), «Cómo leer»,
+    el gráfico y, debajo, el resumen (aparece con la última tanda). A la derecha, un lugar fijo
+    donde entra la tanda de notas activa, cada tarjeta a la altura de su recuadro en el gráfico.
+    El scroll lo marcan paradas invisibles (.marca): al llegar a una tanda corren los autos de
+    esa pista y se prenden los recuadros numerados. pagina.js lee los `data-*`, ubica las
+    tarjetas y dimensiona el panel.
+    `grupos`: [(pista, [(n, título, texto, fila)])], con n de arriba hacia abajo y `fila` el
+    puesto donde está el recuadro. `descripciones`: por pista, el resultado en palabras para
+    lectores de pantalla. `filas`: autos de la carrera. `leyenda_plegada`: «Cómo leer» en una
+    línea (sin parada propia). `salida`/`destino_salida`: texto y ancla del link para saltear.
+    `ganador` («grilla» o «modelo»): el color de la carrera (franja arriba del panel y etiqueta
+    junto al título, los mismos colores de la grilla y el modelo en los gráficos), para que se
+    note el cambio de una carrera a la otra. `orden`: «Carrera 1 de 2»."""
+    nombres = {"arriba": "con todos los pilotos", "abajo": "sin los que abandonaron"}
+    rotulos = "".join(
+        f'<li class="pista-rotulo" data-panel="{panel}"><b>{html.escape(nombre)}</b> '
+        f"<span>{html.escape(detalle)}</span></li>"
+        for panel, (nombre, detalle) in pistas.items())
+    capas = "".join(
+        f'<div class="capa" data-panel="{panel}" data-ancho="carrera-{ronda}-{panel}" '
+        f'data-compacto="carrera-{ronda}-{panel}-c" role="img" '
+        f'aria-label="{html.escape(descripciones[panel])}"><div class="vista"></div></div>'
+        for panel in ("arriba", "abajo"))
+    # las tandas: «Cómo leer» (en notebook, si no va plegado) y una por pista
+    tandas = [] if leyenda_plegada else [
+        ("intro", "arriba", 0, 0, 0, "Cómo leer el gráfico", como_leer(leyenda, "suelta"))]
+    for panel, notas in grupos:
+        tarjetas = "".join(
+            f'<article class="paso-nota" data-n="{n}" data-fila="{fila:g}" tabindex="0">'
+            f'<span class="num" aria-hidden="true">{n}</span>'
+            f'<div><h4><span class="solo-lectores">Nota {n}: </span>{html.escape(t)}</h4>'
+            f"<p>{md(texto)}</p></div></article>" for n, t, texto, fila in notas)
+        tandas.append(("", panel, 1, notas[0][0], notas[-1][0], pistas[panel][0], tarjetas))
+    grupos_html = "".join(
+        f'<section class="grupo-pasos {clase}" data-panel="{panel}" data-hasta="{hasta}" '
+        f'data-min="{pmin}" data-max="{pmax}" data-nombre="{html.escape(nombre)}" '
+        f'aria-label="{html.escape(nombre)}">{contenido}</section>'
+        for clase, panel, hasta, pmin, pmax, nombre, contenido in tandas)
+    marcas = "".join(f'<div class="marca {t[0]}" data-grupo="{i}"></div>' for i, t in enumerate(tandas))
+    etiqueta = {"grilla": "Gana la grilla", "modelo": "Gana el modelo"}.get(ganador, "")
+    return (f'<div class="guiada gana-{ganador}" id="carrera-guiada-{ronda}" data-carrera="{ronda}" '
+            f'data-filas="{filas}"><div class="escenario"><div class="guiada-grafico">'
+            f'<header class="guiada-cabecera"><h3 id="fecha-{ronda}">{html.escape(titulo)} '
+            f'<span class="ganador">{html.escape(etiqueta)}</span></h3>'
+            f'<p class="guiada-progreso"><span><span class="orden">{html.escape(orden)} · </span>'
+            f'<span class="parada" aria-live="polite">Bajá para empezar ↓</span></span>'
+            f'<a class="saltar" href="#{destino_salida}">{html.escape(salida)} ↓</a></p>'
+            f'<ul class="pistas">{rotulos}</ul></header>'
+            f'{como_leer(leyenda, "fija", plegado=leyenda_plegada)}'
+            f'<div class="guiada-lienzo">{capas}</div>'
+            f'<div class="guiada-resumen" aria-live="polite">{md(resumen)}</div></div></div>'
+            f'<div class="guiada-pasos"><div class="guiada-notas">{grupos_html}</div>'
+            f'<div class="marcas">{marcas}</div></div></div>'
+            f'<span class="ancla-salida" id="despues-{ronda}"></span>')
+
+
 def comprimido(nombre: str, dato) -> str:
     """Un dato JSON adentro de la página, en gzip + base64 (lo lee `datos()` en pagina.js)."""
     crudo = json.dumps(dato, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
@@ -135,6 +222,84 @@ def en_script(texto: str) -> str:
 
 
 # ---- la página -----------------------------------------------------------------------------------
+def tabla_pilotos(tablas: dict[int, pd.DataFrame], df: pd.DataFrame) -> dict:
+    """«Todos los pilotos»: una fila por piloto en cada GP, en columnas (así pesa menos).
+
+    Los puestos son los de «Carrera por carrera» (`race_cars.race_table`): `l` largada, `m`
+    predicción del modelo, `f` final; `ma`/`ga`, el modelo y la grilla reordenados solo entre los
+    que terminaron (la cuenta «sin abandonos» de toda la página); `lg`/`ga`/`fa`, la grilla y
+    el final con los que se mide (empates con el puesto promedio). Los textos repetidos (GP,
+    piloto, escudería) van en listas aparte y las filas guardan su índice."""
+    t = pd.concat(tablas.values(), ignore_index=True)
+    t["Carrera"] = t["race"].str.replace("-", "-R")
+    extra = df.set_index(["Carrera", "DriverId"])[
+        ["Q_Best_seconds_DBT_%", "DriverPoints_Before", "DriverPosition_Before", "Q_GridPosition"]]
+    t = t.join(extra, on=["Carrera", "driver_id"])
+    t["anio"] = t["race"].str[:4].astype(int)
+    t["ronda"] = t["race"].str[5:].astype(int)
+    t = t.sort_values(["anio", "ronda", "final_official"]).reset_index(drop=True)
+    t["gp_nombre"] = [carreras.nombre(a, r) for a, r in zip(t["anio"], t["ronda"])]
+    t["piloto"] = t["driver_id"].str.replace("_", " ").str.title()
+    t["escuderia"] = t["team"].map(logos.nombre)
+    listas = {k: sorted(t[c].unique()) for k, c in
+              [("gps", "gp_nombre"), ("pilotos", "piloto"), ("equipos", "escuderia")]}
+    indice = lambda k, c: t[c].map({v: i for i, v in enumerate(listas[k])}).tolist()  # noqa: E731
+    num = lambda c, d=None: [None if pd.isna(x) else (round(float(x), d) if d else int(x))  # noqa: E731
+                             for x in t[c]]
+    fin = t["dnf"] == 0
+    # para medir, las mismas reglas que `race_cars.race_table` (y los títulos): la grilla
+    # empatada con el puesto promedio y, sin abandonos, el final reordenado entre los que terminaron
+    grilla = t["Q_GridPosition"].fillna(21)
+    t["grid_avg"] = grilla.groupby(t["race"]).rank(method="average")
+    t["grid_avg_fin"] = grilla[fin].groupby(t.loc[fin, "race"]).rank(method="average")
+    t["final_fin"] = t.loc[fin, "final"].groupby(t.loc[fin, "race"]).rank(method="average")
+    medio = lambda c: [None if pd.isna(x) else float(x) for x in t[c]]  # noqa: E731
+    return {**listas, "columnas": {
+        "a": t["anio"].tolist(), "r": t["ronda"].tolist(),
+        "gp": indice("gps", "gp_nombre"), "p": indice("pilotos", "piloto"),
+        "e": indice("equipos", "escuderia"), "s": t["driver"].tolist(), "c": t["color"].tolist(),
+        "l": t["grid_official"].astype(int).tolist(), "m": t["pred_pos"].astype(int).tolist(),
+        "f": t["final_official"].astype(int).tolist(), "ab": t["dnf"].astype(int).tolist(),
+        "ma": [int(x) if ok else None for x, ok in zip(t["pred_adj"], fin)],
+        "lg": medio("grid_avg"), "ga": medio("grid_avg_fin"), "fa": medio("final_fin"),
+        "q": num("Q_Best_seconds_DBT_%", 2), "pts": num("DriverPoints_Before"),
+        "cp": num("DriverPosition_Before"), "st": t["status"].astype(str).tolist()}}
+
+
+# «Todos los pilotos»: los filtros, el resumen, el gráfico agrupado y la tabla (los llena pagina.js)
+EXPLORADOR = """
+<div class="explorador" id="explorador">
+  <div class="exp-filtros">
+    <label class="campo">Temporada <select data-filtro="anio"></select></label>
+    <label class="campo">Gran Premio <select data-filtro="gp"></select></label>
+    <label class="campo">Piloto <select data-filtro="piloto"></select></label>
+    <label class="campo">Escudería <select data-filtro="equipo"></select></label>
+    <fieldset class="campo exp-rango"><legend>Largó entre</legend>
+      <input type="number" data-filtro="desde" min="1" max="26" aria-label="Largó desde el puesto">
+      <span>y</span>
+      <input type="number" data-filtro="hasta" min="1" max="26" aria-label="Largó hasta el puesto"></fieldset>
+    <label class="campo">Resultado <select data-filtro="resultado">
+      <option value="">Todos</option><option value="termino">Terminaron</option>
+      <option value="abandono">Abandonaron</option></select></label>
+    <label class="campo">Quién acertó mejor <select data-filtro="quien">
+      <option value="">Cualquiera</option><option value="modelo">El modelo</option>
+      <option value="grilla">La grilla</option><option value="igual">Empataron</option></select></label>
+    <button type="button" class="exp-limpiar">Sacar los filtros</button>
+  </div>
+  <p class="exp-cuenta" aria-live="polite"></p>
+  <div class="exp-resumen"></div>
+  <div class="exp-grafico">
+    <div class="exp-grafico-cabeza">
+      <h4>Error promedio, agrupado por</h4>
+      <div class="exp-agrupar" role="group" aria-label="Agrupar por"></div>
+      <button type="button" class="exp-csv">Descargar CSV</button>
+    </div>
+    <p class="nota exp-ayuda">Clic en un grupo para filtrar por él.</p>
+    <div class="vista"></div>
+  </div>
+</div>"""
+
+
 def generar(destino: Path = SITIO) -> Path:
     """Arma `site/index.html` con lo que hay en `app_data/` y devuelve la ruta."""
     leer = lambda nombre: json.loads((APP_DATA / nombre).read_text(encoding="utf-8"))  # noqa: E731
@@ -176,7 +341,8 @@ def generar(destino: Path = SITIO) -> Path:
                          ).split("AUC medio ")[1].rstrip(")")
     n_filas_txt = f"{len(df):,}".replace(",", ".")
     filas_crudas_txt = f"{resumen['datos']['pasos'][0]['filas']:,}".replace(",", ".")
-    corte_anio, corte_fecha = resumen["datos"]["al_dia"].split(", ")
+    corte_anio, corte_fecha = resumen["datos"]["al_dia"].split(", ")   # «2026», «fecha 17»
+    corte_gp = carreras.nombre(int(corte_anio), int(corte_fecha.split()[-1]))
     archivo_datos = resumen["datos"]["archivo"].replace("\\", "/")
     hay_practica = df[tallo.FILAS_DATOS[model_moves.FP_PACE]].notna().any(axis=1)
     gp_sin_practica = int((~hay_practica.groupby(df["Carrera"]).any()).sum())
@@ -187,7 +353,8 @@ def generar(destino: Path = SITIO) -> Path:
     pasos_datos = resumen["datos"]["pasos"]
     fechas_dup = pasos_datos[1]["paso"].split("(")[1].rstrip(")")   # «2023-R11, 2025-R16»
     rondas_dup = len(fechas_dup.split(", "))
-    fechas_dup = " y ".join(f"{a}, fecha {r}" for a, r in (f.split("-R") for f in fechas_dup.split(", ")))
+    fechas_dup = " y ".join(f"{carreras.nombre(int(a), int(r))} de {a}"
+                            for a, r in (f.split("-R") for f in fechas_dup.split(", ")))
     cv = tallo.cifras_vueltas(ejemplo_vueltas)   # el ejemplo de vueltas de prácticas (Sector 1)
     mot = lambda m: cv["motivos"].get(m, 0)  # noqa: E731
     blandas = cv["por_goma"]["SOFT"] | {"mejor_txt": tallo._reloj(cv["por_goma"]["SOFT"]["mejor"]),
@@ -209,10 +376,10 @@ def generar(destino: Path = SITIO) -> Path:
         "grilla-sin": tallo.grilla_vs_final_sin_abandonos(df),
         **{f"paso-{i}": g for i, g in enumerate(pasos.graficos_pasos(df, test, anio_test=ANIO_TEST), 1)},
         "abandonos": tallo.abandonos_por_temporada(df),
-        "panorama": panorama.panorama(df, width=450),
     }
+    tablas = {}
     for anio in anios:
-        tabla = race_cars.race_table(df[df["Year"] == anio])
+        tabla = tablas[anio] = race_cars.race_table(df[df["Year"] == anio])
         es_anio = (df["Year"] == anio).to_numpy()
         contrib = model_moves.contributions(
             aportes[es_anio].drop(columns=["Carrera", "DriverId"]), df[es_anio])
@@ -223,6 +390,178 @@ def generar(destino: Path = SITIO) -> Path:
         specs[f"autos-{anio}"] = race_cars.race_cars_compare(
             tabla, model_name=nombre_modelo, width=1000)
         specs[f"porque-{anio}"] = model_moves.moves_chart(contrib, model_name=nombre_modelo, width=800)
+    # Sector 3: las carreras guiadas, cada una sola (sin menú) y con sus pilotos a mano (por sigla)
+    guiadas = {}
+    for ronda in CARRERAS_GUIADAS:
+        guiadas[ronda] = tablas[ANIO_TEST][tablas[ANIO_TEST]["race"] == f"{ANIO_TEST}-{ronda:02d}"]
+    g4, g13 = (guiadas[r].set_index("driver") for r in CARRERAS_GUIADAS)
+    # «Probá el modelo»: la pista de la simulación (los datos los pone pagina.js)
+    todas = pd.concat(tablas.values())
+    sim_max_behind = float(np.ceil(todas["behind"].max()))
+    specs["simulacion"] = race_cars.race_cars_sim(
+        todas["team"].unique().tolist(), n_max=int(todas.groupby("race").size().max()),
+        max_behind=sim_max_behind, model_name=nombre_modelo, width=1000)
+    nom = lambda g, sigla: g.loc[sigla, "driver_id"].split("_")[-1].title()  # noqa: E731
+    err = lambda g, sigla, col="pred_pos": int(abs(g.loc[sigla, col] - g.loc[sigla, "final"]))  # noqa: E731
+    v = lambda g, sigla, col: int(g.loc[sigla, col])  # noqa: E731
+    mae = lambda g, col: fmt(g[col].iloc[0])  # noqa: E731
+    dnf = lambda g: g[g["dnf"] == 1].sort_values("final").index.tolist()  # noqa: E731
+    nombres = lambda siglas, g: (", ".join(nom(g, x) for x in siglas[:-1])  # noqa: E731
+                               + " y " + nom(g, siglas[-1]))
+    # Las carreras guiadas del Sector 3 se cuentan en pasos: el gráfico queda quieto y al lado
+    # pasan tarjetas; cada una mueve la carrera (`avance` de `desde` a `hasta` mientras se lee) y
+    # prende su recuadro numerado en el gráfico (`paso`). Las notas son
+    # (n, sigla, dónde va el recuadro, título, texto). Los números salen de los datos; qué piloto
+    # se señala y por qué, de mirar cada carrera (y de los aportes de cada variable).
+    notas_guiadas = {
+        4: {
+            "arriba": [
+                (1, "LEC", "final", f"{nom(g4, 'LEC')}, al revés: lo subió y terminó {v(g4, 'LEC', 'final')}.º",
+                 f"Largó {v(g4, 'LEC', 'grid')}.º y el modelo lo subió al "
+                 f"{v(g4, 'LEC', 'pred_pos')}.º, sobre todo por los puntos que traía en el "
+                 f"campeonato. Terminó {v(g4, 'LEC', 'final')}.º: el modelo erra por "
+                 f"{err(g4, 'LEC')} y la grilla por {err(g4, 'LEC', 'grid')}."),
+                (2, "NOR", "final", f"{nom(g4, 'NOR')}: el modelo lo bajó y terminó {v(g4, 'NOR', 'final')}.º",
+                 f"Largó {v(g4, 'NOR', 'grid')}.º y el modelo lo bajó al "
+                 f"{v(g4, 'NOR', 'pred_pos')}.º porque tenía menos puntos que los de adelante. "
+                 f"Terminó {v(g4, 'NOR', 'final')}.º: el modelo erra por {err(g4, 'NOR')} y la "
+                 f"grilla por {err(g4, 'NOR', 'grid')}."),
+                (3, "GAS", "llegada", f"{nom(g4, 'GAS')} abandonó",
+                 f"El modelo lo ponía {v(g4, 'GAS', 'pred_pos')}.º y quedó "
+                 f"{v(g4, 'GAS', 'final')}.º: {err(g4, 'GAS')} puestos de error (la grilla, "
+                 f"{err(g4, 'GAS', 'grid')}). Nadie podía saberlo antes de largar."),
+                (4, "HAD", "final", f"{nom(g4, 'HAD')}: la grilla acierta de casualidad",
+                 f"Largó último, abandonó y quedó último: error 0 para la grilla. El modelo lo "
+                 f"subía al {v(g4, 'HAD', 'pred_pos')}.º y erra por {err(g4, 'HAD')}."),
+            ],
+            "abajo": [
+                (5, dnf(g4), "grupo", "Sin los que abandonaron",
+                 f"{nombres(dnf(g4), g4)} se detienen en la vuelta en que se retiraron, quedan grises al "
+                 f"fondo y salen de la cuenta. Los de atrás suben un lugar por cada uno: a "
+                 f"{nom(g4, 'BOR')} el modelo lo ponía {v(g4, 'BOR', 'pred_pos')}.º y ahora "
+                 f"{v(g4, 'BOR', 'pred_adj')}.º. El error del modelo baja de "
+                 f"{mae(g4, 'mae_model')} a {mae(g4, 'mae_adj')} y el de la grilla, de "
+                 f"{mae(g4, 'mae_grid')} a {mae(g4, 'mae_grid_adj')}."),
+                (6, "VER", "llegada", f"{nom(g4, 'VER')}: acá acierta el modelo",
+                 f"Largó {v(g4, 'VER', 'grid')}.º, el modelo lo puso "
+                 f"{v(g4, 'VER', 'pred_adj')}.º y terminó {v(g4, 'VER', 'final')}.º: erra por "
+                 f"{err(g4, 'VER', 'pred_adj')}, la grilla por {err(g4, 'VER', 'grid_adj')}."),
+                (7, "BOR", "final", f"{nom(g4, 'BOR')}: la remontada que nadie ve",
+                 f"Largó {v(g4, 'BOR', 'grid')}.º y terminó {v(g4, 'BOR', 'final')}.º. Entre "
+                 f"los que terminaron, el modelo lo ponía {v(g4, 'BOR', 'pred_adj')}.º y la "
+                 f"grilla {v(g4, 'BOR', 'grid_adj')}.º: los dos erran por "
+                 f"{err(g4, 'BOR', 'pred_adj')} o más."),
+            ],
+        },
+        13: {
+            "arriba": [
+                (1, "ANT", ["largada", "llegada", "final"],
+                 f"{nom(g13, 'ANT')} largó {v(g13, 'ANT', 'grid')}.º y ganó",
+                 f"La grilla lo deja {v(g13, 'ANT', 'grid')}.º. El modelo lo sube al "
+                 f"{v(g13, 'ANT', 'pred_pos')}.º: traía muchos puntos en el campeonato y su "
+                 "tiempo de clasificación fue mucho mejor que su lugar de largada. No adivina que "
+                 f"gana, pero erra por {err(g13, 'ANT')} y la grilla por "
+                 f"{err(g13, 'ANT', 'grid')}: solo con él, el modelo saca "
+                 f"{err(g13, 'ANT', 'grid') - err(g13, 'ANT')} puestos de ventaja."),
+                (2, "NOR", "final", f"{nom(g13, 'NOR')}: acierto exacto",
+                 f"Largó {v(g13, 'NOR', 'grid')}.º, el modelo lo puso "
+                 f"{v(g13, 'NOR', 'pred_pos')}.º y terminó {v(g13, 'NOR', 'final')}.º. La "
+                 f"grilla erra por {err(g13, 'NOR', 'grid')}."),
+                (3, "LEC", "final", f"{nom(g13, 'LEC')} abandonó",
+                 f"Los dos lo ponían {v(g13, 'LEC', 'pred_pos')}.º y quedó "
+                 f"{v(g13, 'LEC', 'final')}.º: {err(g13, 'LEC')} puestos de error para cada "
+                 "uno. Empatan, así que no cambia quién gana, pero sube el promedio de ambos."),
+            ],
+            "abajo": [
+                (4, dnf(g13), "grupo", "Sin los que abandonaron",
+                 f"{nombres(dnf(g13), g13)} se detienen en la vuelta en que se retiraron, quedan grises al "
+                 f"fondo y salen de la cuenta. Los de atrás suben un lugar por cada uno: a "
+                 f"{nom(g13, 'LAW')} el modelo lo ponía {v(g13, 'LAW', 'pred_pos')}.º y ahora "
+                 f"{v(g13, 'LAW', 'pred_adj')}.º. El error del modelo baja de "
+                 f"{mae(g13, 'mae_model')} a {mae(g13, 'mae_adj')} y el de la grilla, de "
+                 f"{mae(g13, 'mae_grid')} a {mae(g13, 'mae_grid_adj')}."),
+                (5, "GAS", "llegada", f"{nom(g13, 'GAS')} largó {v(g13, 'GAS', 'grid')}.º",
+                 f"El modelo no le cree: lo baja al {v(g13, 'GAS', 'pred_adj')}.º porque tenía "
+                 f"pocos puntos. Terminó {v(g13, 'GAS', 'final')}.º: el modelo erra por "
+                 f"{err(g13, 'GAS', 'pred_adj')} y la grilla por {err(g13, 'GAS', 'grid_adj')}."),
+                (6, "LAW", "final", f"{nom(g13, 'LAW')} largó último y terminó "
+                 f"{v(g13, 'LAW', 'final')}.º",
+                 f"Entre los que terminaron, el modelo lo ponía {v(g13, 'LAW', 'pred_adj')}.º "
+                 f"(erra por {err(g13, 'LAW', 'pred_adj')}) y la grilla "
+                 f"{v(g13, 'LAW', 'grid_adj')}.º (erra por {err(g13, 'LAW', 'grid_adj')})."),
+            ],
+        },
+    }
+    # Cómo leer el gráfico: va una sola vez, antes de la primera carrera (todo junto).
+    como_se_lee = [   # (título, texto, solo en la versión completa del gráfico): cortos, entran
+        # en dos líneas arriba del gráfico
+        ("Largada", "El orden de salida: la predicción más simple.", False),
+        ("La pista", "Cada auto llega al puesto del modelo; la estela marca cada cambio.", False),
+        ("Final real", "Cómo terminó. Punteada: de la predicción al resultado. ✕ = no terminó.",
+         False),
+        ("Δ y Mejora", "Puestos ganados (+) o perdidos (−). ▲ el modelo erró menos que la grilla.",
+         True),
+    ]
+    # Cada pista es un grupo de notas seguidas: al acercarse al grupo corren los autos y, al
+    # llegar, ya están todas sus notas (y sus recuadros) a la vista.
+    # La fila (puesto) donde está el recuadro de cada nota: ahí se ubica su tarjeta y por ahí
+    # se numera (de arriba hacia abajo). Una nota con varios recuadros se ubica en el último
+    # (Antonelli: su resultado).
+    def fila_de(g, panel: str, sigla, donde) -> float:
+        donde = donde[-1] if isinstance(donde, list) else donde
+        if donde == "grupo":
+            return float(g.loc[list(sigla), "final"].mean())
+        col = {"final": "final", "largada": "grid",
+               "llegada": "pred_pos" if panel == "arriba" else "pred_adj"}[donde]
+        return float(g.loc[sigla, col])
+    tablas_guiadas = {4: g4, 13: g13}
+    for ronda in CARRERAS_GUIADAS:
+        n = 0
+        for panel in ("arriba", "abajo"):
+            filas = [(fila_de(tablas_guiadas[ronda], panel, sigla, donde), k, sigla, donde, t, x)
+                     for k, (_, sigla, donde, t, x) in enumerate(notas_guiadas[ronda][panel])]
+            notas_guiadas[ronda][panel] = []
+            for fila, _, sigla, donde, t, x in sorted(filas):
+                n += 1
+                notas_guiadas[ronda][panel].append((n, sigla, donde, t, x, fila))
+    grupos_guiadas = {ronda: [(panel, [(n, titulo, texto, fila) for n, _, _, titulo, texto, fila
+                                       in notas_guiadas[ronda][panel]])
+                              for panel in ("arriba", "abajo")]
+                      for ronda in CARRERAS_GUIADAS}
+    def pistas_de(g) -> dict[str, tuple[str, str]]:
+        """Rótulo y errores de cada pista, para la cabecera fija de la carrera guiada."""
+        return {"arriba": ("Con todos los pilotos",
+                           f"error medio: modelo {mae(g, 'mae_model')} · grilla {mae(g, 'mae_grid')}"),
+                "abajo": (f"Sin los {int(g['dnf'].sum())} que abandonaron",
+                          f"error medio: modelo {mae(g, 'mae_adj')} · grilla "
+                          f"{mae(g, 'mae_grid_adj')} · ya usa el resultado, no es una predicción")}
+
+    def descripcion_pistas(g) -> dict[str, str]:
+        """El resultado de cada pista en palabras (para lectores de pantalla)."""
+        nada = f"Gráfico animado de {g['race_label'].iloc[0]}: largada, predicción y resultado real. "
+        return {"arriba": nada + f"Con todos los pilotos, el modelo se equivoca en promedio por "
+                         f"{mae(g, 'mae_model')} puestos y la grilla por {mae(g, 'mae_grid')}. "
+                         "Las notas que siguen explican qué mirar.",
+                "abajo": nada + f"Sin los {int(g['dnf'].sum())} que abandonaron, el modelo se "
+                         f"equivoca por {mae(g, 'mae_adj')} puestos y la grilla por "
+                         f"{mae(g, 'mae_grid_adj')}. Las notas que siguen explican qué mirar."}
+
+    for ronda in CARRERAS_GUIADAS:
+        for panel in ("arriba", "abajo"):
+            # una nota puede marcar varios lugares del mismo piloto (Antonelli: largada,
+            # llegada y resultado)
+            marcas = [{"n": n, "driver": sigla, "donde": d}
+                      for n, sigla, donde, _, _, _ in notas_guiadas[ronda][panel]
+                      for d in (donde if isinstance(donde, list) else [donde])]
+            for compacto in (False, True):
+                specs[f"carrera-{ronda}-{panel}" + ("-c" if compacto else "")] = (
+                    race_cars.race_cars_guiada(
+                        guiadas[ronda], abajo=panel == "abajo", marcas=marcas,
+                        compacto=compacto, width=560 if compacto else 1000,
+                        # filas más bajas y letras más grandes: el gráfico se ve achicado en el
+                        # panel y así las filas quedan en unos 12 px o más en pantalla
+                        row_height=26 if compacto else 30, letra=1.4 if compacto else 1.35,
+                        model_name=nombre_modelo))
     datos = {nombre: chart.to_dict() for nombre, chart in specs.items()}
 
     # ---- Probá el modelo: las filas de cada carrera y los límites de los controles ---------------
@@ -236,17 +575,24 @@ def generar(destino: Path = SITIO) -> Path:
         rangos.setdefault(f"FP_Desgaste_{goma}", [float(d.min()), float(d.max())])
         habituales.setdefault(f"FP_Desgaste_{goma}", [float(d.quantile(.01)), float(d.quantile(.99))])
         medianas.setdefault(f"FP_Desgaste_{goma}", float(d.median()))
-    carreras = {}
+    # sigla, escudería y color de cada auto: los mismos que en «Carrera por carrera»
+    autos_info = pd.concat(tablas.values()).assign(
+        Carrera=lambda t: t["race"].str.replace("-", "-R")).set_index(["Carrera", "driver_id"])
+    casos_carreras = {}
     for carrera, autos in df.groupby("Carrera", sort=False):   # en el orden del parquet
         valores = autos[entrada].to_numpy(dtype=float, na_value=np.nan)
-        carreras[carrera] = {
+        casos_carreras[carrera] = {
             "anio": int(autos["Year"].iloc[0]),
+            "nombre": carreras.etiqueta(int(autos["Year"].iloc[0]), int(autos["RoundNumber"].iloc[0])),
             "pilotos": [{"id": piloto, "nombre": piloto.replace("_", " ").title(),
                          "puesto": int(puesto), "termino": str(termino) != "False",
+                         **{k: str(autos_info.loc[(carrera, piloto), c]) for k, c in
+                            [("sigla", "driver"), ("equipo", "team"), ("color", "color")]},
                          "v": [None if np.isnan(x) else float(x) for x in fila]}
                         for piloto, puesto, termino, fila in zip(
                             autos["DriverId"], autos["Puesto"], autos["Terminó"], valores)]}
-    datos["casos"] = {"entrada": entrada, "carreras": carreras}
+    datos["casos"] = {"entrada": entrada, "carreras": casos_carreras}
+    datos["pilotos"] = tabla_pilotos(tablas, df)
 
     config = {
         "anioTest": ANIO_TEST, "anios": anios, "modelo": modelo,
@@ -255,6 +601,7 @@ def generar(destino: Path = SITIO) -> Path:
                        "rango": rangos[col], "habitual": habituales[col],
                        "mediana": medianas.get(col)} for col, etiqueta, paso, decimales in CONTROLES],
         "medianas": medianas,
+        "simMaxDetras": sim_max_behind,   # tope de la distancia al líder en la pista simulada
     }
 
     # ---- el cuerpo: la copa de martini, en orden ----------------------------------------------------
@@ -287,68 +634,40 @@ def generar(destino: Path = SITIO) -> Path:
           "llegar a esas filas hicimos cuatro pasos:"),
         proceso([
             ("Bajamos los datos",
-             "De dos fuentes públicas: una con los resultados, la clasificación y el campeonato de "
-             "cada Gran Premio, y otra con cada vuelta de las prácticas libres (tiempo, goma, si "
-             "entró a boxes, si hubo bandera). Los guardamos tal como vienen. Arrancamos en "
-             f"{int(df['Year'].min())} porque es el primer año con las vueltas de prácticas "
-             "registradas: antes hay resultados pero no prácticas, y las filas no serían "
-             f"comparables. Llegamos hasta la {corte_fecha} de {corte_anio}."),
+             "Resultados, clasificación y campeonato de cada Gran Premio, y cada vuelta de las "
+             f"prácticas libres, de {int(df['Year'].min())} al {corte_gp} de {corte_anio}."),
             ("Los juntamos en una tabla",
-             "Para cada Gran Premio nos quedamos con las vueltas de prácticas que sirven para medir "
-             "ritmo y guardamos, para cada goma, la mejor y el promedio (abajo, un ejemplo). Lo "
-             "unimos con resultados, clasificación y campeonato, y pasamos cada tiempo a «cuánto más "
-             "lento que el mejor de esa carrera», para comparar circuitos distintos. Al final junta "
-             f"todas las carreras: {filas_crudas_txt} filas, una por piloto y carrera, con "
-             f"{n_columnas} datos cada una."),
+             f"Una fila por piloto y carrera: {filas_crudas_txt} filas con {n_columnas} datos. Los "
+             "tiempos, como distancia al mejor de esa carrera."),
             ("Revisamos las filas",
-             f"En {rondas_dup} fechas ({fechas_dup}) había pilotos cargados dos veces, sin forma "
-             "de saber cuál era la fila buena: las sacamos enteras. Quedan "
+             f"Sacamos {rondas_dup} Grandes Premios con pilotos cargados dos veces. Quedan "
              f"{n_filas_txt} filas de {n_carreras} Grandes Premios."),
             ("Elegimos los datos",
-             f"De los {n_columnas} quedan 8: los que se saben antes de largar, sirven para "
-             "carreras futuras y dicen algo que otro dato no dice. En el gráfico de abajo, qué "
-             "salió y por qué."),
+             f"De los {n_columnas} quedan 8: los que se saben antes de largar y dicen algo nuevo."),
         ]),
         '<div class="dos-columnas">',
-        p("**Un ejemplo: cómo sale la mejor vuelta con cada goma.** Ese dato no viene hecho: lo "
-          "armamos nosotros con cada vuelta de las prácticas. Así fue con "
-          f"{cv['piloto'].capitalize()} en el {cv['gran_premio']}: dio {cv['total']} vueltas en "
-          f"FP1, FP2 y FP3, y solo {cv['quedan']} sirven para medir ritmo. Primero salen las "
-          f"entradas y salidas de boxes ({mot('Entrada o salida de boxes')}), las que tienen un "
-          f"tiempo poco confiable o incompleto ({mot('Tiempo poco confiable o incompleto')}), las "
-          f"anuladas por los comisarios ({mot('Anulada por los comisarios')}) y las que tuvieron "
-          f"bandera o auto de seguridad ({mot('Bandera o auto de seguridad')}). Después, en cada "
-          "sesión y con cada goma, las que son más de 5 % más lentas que su mejor vuelta "
-          f"({mot('Más de 5 % más lenta que su mejor con esa goma')}): por ejemplo, vueltas de "
-          "enfriamiento o con tráfico. Con las que quedan se guardan dos datos por goma: la mejor "
-          f"vuelta (con blandas, {blandas['mejor_txt']}) y el promedio ({blandas['promedio_txt']}). "
-          "Cuánto más lento es el promedio que la mejor es el desgaste de esa goma "
-          f"({fmt(blandas['desgaste'], 1)}\u00a0% con blandas), uno de los dos datos que calcula el modelo."),
+        p("**Un ejemplo: la mejor vuelta con cada goma.** Ese dato lo armamos nosotros. "
+          f"{cv['piloto'].capitalize()} dio {cv['total']} vueltas en las prácticas del "
+          f"{cv['gran_premio']} y solo {cv['quedan']} sirven para medir ritmo: el gráfico muestra "
+          "por qué se descarta cada una. Con las que quedan guardamos, por goma, la mejor vuelta "
+          f"({blandas['mejor_txt']} con blandas) y el promedio ({blandas['promedio_txt']}): la "
+          f"diferencia es el desgaste ({fmt(blandas['desgaste'], 1)}\u00a0%)."),
         grafico("vueltas"),
         "</div>",
         '<div class="dos-columnas">',
-        p("**Qué salió y por qué.** Leé el gráfico de arriba hacia abajo: cada barra gris es un "
-          "grupo de datos que sacamos, con el motivo al lado. Detrás hay tres reglas. **Solo vale "
-          "lo que se sabe antes de largar:** usar si terminó o si lo sancionaron sería hacer "
-          "trampa. **Tiene que servir para carreras futuras:** quién es el piloto o el equipo "
-          "funciona en estos años pero no se sostiene (en el EDA, el puesto promedio de Red Bull "
-          "pasa de 3,6 en 2023 a 9,1 en 2026). **Tiene que decir algo nuevo:** la "
-          "telemetría parecía útil, pero lo que mostraba es que los autos rápidos largan "
-          "adelante, y eso ya lo dice la grilla. Los dos datos calculados los arma el modelo con "
-          "las vueltas de las prácticas: cuánto se gastan las gomas."),
+        p("**Qué salió y por qué.** Cada barra gris es un grupo de datos que sacamos, con el "
+          "motivo al lado. Tres reglas: **solo lo que se sabe antes de largar**; **que sirva para "
+          "carreras futuras** (quién es el equipo no se sostiene: el puesto promedio de Red Bull "
+          "pasa de 3,6 en 2023 a 9,1 en 2026), y **que diga algo nuevo** (la telemetría repetía "
+          "lo que ya dice la grilla)."),
         grafico("columnas"),
         "</div>",
         '<div class="dos-columnas">', grafico("datos"),
-        p("**Con qué trabajamos.** De esos 8 datos, no todos están siempre. En el gráfico, cada "
-          "casilla es el % de pilotos con ese dato en esa temporada: más lleno, más completo. La "
-          "largada y la clasificación están casi siempre, el campeonato falta solo en la primera "
-          "fecha (todavía no hay puntos), y las prácticas tienen huecos en 2018-2019 y 2023-2024 "
-          f"({hay_practica.mean():.0%} en total; en {gp_sin_practica} de los {n_carreras} Grandes "
-          "Premios no hay ningún dato de prácticas). **Ninguna fila se descarta por un faltante:** "
-          "a la derecha de cada dato está qué hace el modelo cuando falta. El «valor típico» es el "
-          "del medio (la mediana) de las temporadas con las que aprendió, y la marca le avisa al "
-          "modelo que ese valor fue completado, así no lo confunde con uno real. Lo que siempre "
-          "está, la grilla, va a ser lo que más pesa."),
+        p("**Con qué trabajamos.** Cada casilla es el % de pilotos con ese dato en esa temporada. "
+          "La largada y la clasificación están casi siempre; las prácticas tienen huecos "
+          f"({hay_practica.mean():.0%} en total). **Ninguna fila se descarta por un faltante:** el "
+          "modelo usa un valor típico y una marca de que faltaba (a la derecha). Lo que siempre "
+          "está, la grilla, es lo que más pesa."),
         "</div>",
         como_lo_sabemos(
             p("**De dónde salen.** Del proceso automático de descarga que armamos en la Entrega 1 "
@@ -356,10 +675,20 @@ def generar(destino: Path = SITIO) -> Path:
               "de las estadísticas estilo Ergast (resultados, clasificación y "
               "campeonato) y la telemetría de FastF1 (prácticas libres): "
               f"{filas_crudas_txt} filas, una por piloto en cada Gran Premio, "
-              f"de {int(df['Year'].min())} a {int(df['Year'].max())}, con corte en la "
-              f"{corte_fecha} de {corte_anio} (datos del {FECHA_DATOS}). El respaldo es el archivo "
+              f"de {int(df['Year'].min())} a {int(df['Year'].max())}, con corte en el "
+              f"{corte_gp} de {corte_anio} (datos del {FECHA_DATOS}). El respaldo es el archivo "
               f"{archivo_datos}, guardado en el repositorio; "
               "build_app.py lo lee de ahí."),
+            p("**Detalles del proceso.** Arrancamos en "
+              f"{int(df['Year'].min())} porque es el primer año con las vueltas de prácticas "
+              "registradas (antes hay resultados pero no prácticas). De las prácticas nos quedamos "
+              "con las vueltas que sirven para medir ritmo (sin boxes, banderas, vueltas anuladas "
+              "ni de enfriamiento) y, por goma, con la mejor y el promedio. Los tiempos pasan a "
+              "«cuánto más lento que el mejor de esa carrera», para comparar circuitos distintos. "
+              f"Los pilotos cargados dos veces estaban en {fechas_dup}, sin forma de saber cuál "
+              f"era la fila buena. En {gp_sin_practica} de los {n_carreras} Grandes Premios no hay "
+              "ningún dato de prácticas; el valor típico de un faltante es la mediana de las "
+              "temporadas con las que aprendió el modelo."),
             p("**Qué filtramos.** Revisamos los datos paso a paso y "
               "anotamos cuántas filas quedaron después de cada uno:"),
             tabla_html(*tabla_nb("Limpieza aplicada")),
@@ -462,7 +791,7 @@ def generar(destino: Path = SITIO) -> Path:
                    f"{fmt(test['mae_grilla_sin_abandonos'])} puestos), pero con los abandonos quedan casi "
                    f"empatados ({fmt(test['mae_modelo'])} contra {fmt(test['mae_grilla'])})"),
         p(f"Son las {test['carreras']} carreras del test ({ANIO_TEST}), que el modelo no vio al "
-          "entrenar. Leé los tres pasos de izquierda a derecha: la flecha marca qué mirar en cada "
+          "entrenar. Leé los tres pasos en orden: la flecha marca qué mirar en cada "
           "gráfico, y debajo está la explicación."),
         '<div class="pasos-fila">',
         '<div class="paso">', grafico("paso-1"),
@@ -495,6 +824,28 @@ def generar(destino: Path = SITIO) -> Path:
           "fallan casi igual con ellos, ese error tapa la mejora del paso 2."),
         "</div>",
         "</div>",
+
+        # ---- dos carreras del test, guiadas (la versión libre está en «Carrera por carrera») ----
+        '<h3 class="subseccion" id="dos-carreras">Dos carreras, paso a paso</h3>',
+        p("Para ver lo mismo en carreras concretas, elegimos dos fechas del test. El gráfico se "
+          "queda quieto y **cada vez que bajás** aparece la tanda de notas siguiente: primero con "
+          "todos los pilotos y después sin los que abandonaron. En cada tanda corren los autos y "
+          "cada nota marca en rojo, con su número, lo que explica, a su misma altura. Si subís, "
+          "vuelve atrás."),
+        carrera_guiada(4, grupos_guiadas[4], ganador="grilla", orden="Carrera 1 de 2", filas=len(g4), salida="Saltar a la próxima carrera", destino_salida="carrera-guiada-13", titulo=f"{carreras.nombre(ANIO_TEST, 4)} {ANIO_TEST}", pistas=pistas_de(g4), leyenda=como_se_lee, descripciones=descripcion_pistas(g4), resumen=f"**En resumen.** Sin abandonos, la ventaja de la grilla baja de "
+          f"{fmt(g4['mae_model'].iloc[0] - g4['mae_grid'].iloc[0])} a "
+          f"{fmt(g4['mae_adj'].iloc[0] - g4['mae_grid_adj'].iloc[0])} puestos por piloto: casi "
+          f"toda venía de los abandonos, sobre todo de {nom(g4, 'HAD')}. Lo que queda son "
+          f"{nom(g4, 'LEC')} y {nom(g4, 'NOR')}: el modelo los movió por los puntos del "
+          "campeonato y esta vez la carrera salió al revés."),
+        carrera_guiada(13, grupos_guiadas[13], ganador="modelo", orden="Carrera 2 de 2", filas=len(g13), salida="Saltar esta carrera", destino_salida="despues-13", titulo=f"{carreras.nombre(ANIO_TEST, 13)} {ANIO_TEST}", pistas=pistas_de(g13), leyenda=como_se_lee, descripciones=descripcion_pistas(g13), resumen=f"**En resumen.** Con todos, el modelo gana por "
+          f"{fmt(g13['mae_grid'].iloc[0] - g13['mae_model'].iloc[0])} puestos por piloto, y sin "
+          f"abandonos por {fmt(g13['mae_grid_adj'].iloc[0] - g13['mae_adj'].iloc[0])}. "
+          f"La diferencia la hacen los pilotos que largan fuera de su lugar, como "
+          f"{nom(g13, 'ANT')} y {nom(g13, 'LAW')}: la grilla los deja donde largaron y el modelo, "
+          "que mira más que la largada, los acerca a donde terminaron."),
+        nota("¿Querés ver otra? En [Carrera por carrera](#una-temporada), más abajo, están todas "
+             f"las carreras de {anios[-1]} a {anios[0]} con la misma animación."),
         como_lo_sabemos(
             p("**Qué medimos.** El error absoluto medio (MAE) indica cuántos "
               "puestos nos equivocamos en promedio, después de ordenar "
@@ -541,9 +892,10 @@ def generar(destino: Path = SITIO) -> Path:
               "y algo más adelante a quienes terminan atrás. "
               "El error más grande lo ponen los abandonos (abajo)."),
             tabla_tramos(),
-            nota("Test 2026. Sesgo = puesto predicho − puesto real: positivo, lo pone "
-                 "más atrás de donde terminó; negativo, más adelante. El error más "
-                 "grande está en los que terminan 16.º o peor, donde caen los abandonos."),
+            nota("Test 2026. Sesgo = puesto predicho − puesto real, con la misma convención "
+                 "que los gráficos: positivo, terminó más adelante de lo predicho (ganó "
+                 "puestos); negativo, más atrás. El error más grande está en los que terminan "
+                 "16.º o peor, donde caen los abandonos."),
             p("**Cuánto pesan los abandonos en el error.** Separamos a quienes terminaron "
               "de quienes no terminaron y sumamos sus errores absolutos. "
               "La tabla compara cuántos registros representan y qué parte "
@@ -558,17 +910,34 @@ def generar(destino: Path = SITIO) -> Path:
             nota("Los pesos corresponden a variables transformadas y escaladas: "
                  "no son puestos ganados o perdidos por cada unidad original "
                  "ni demuestran una relación causal.")),
+        # ---- Cierre del relato: qué nos llevamos ---------------------------------------------------
+        '<section class="cierre-relato" id="que-nos-llevamos"><h2>Qué nos llevamos</h2>'
+        '<div class="cierre-columnas">',
+        p(f"**Qué aprendimos.** Con lo que se sabe antes de largar, el modelo ordena mejor que la "
+          f"grilla a los que terminan: se equivoca por {fmt(test['mae_modelo_sin_abandonos'])} "
+          f"puestos y la grilla por {fmt(test['mae_grilla_sin_abandonos'])}. La largada sigue "
+          "siendo lo que más pesa; el modelo suma el campeonato, la clasificación y las prácticas."),
+        p(f"**Límites.** Los abandonos no se pueden anticipar con estos datos (el clasificador que "
+          f"probamos tuvo un AUC de {auc_abandonos}; 0,5 es adivinar) y se comen la ventaja: con "
+          f"todos los pilotos, {fmt(test['mae_modelo'])} contra {fmt(test['mae_grilla'])}. Además, "
+          f"el test son {test['carreras']} carreras de {ANIO_TEST}: con más, la diferencia podría "
+          "moverse."),
+        p("**Qué probaríamos después.** Datos que se conocen antes de largar y no usamos, como el "
+          "clima o las sanciones en la grilla, y predecir el abandono por separado para combinarlo "
+          "con el orden, en lugar de tratarlo como error."),
+        "</div></section>",
         "<hr>",
 
         # ---- Copa ----------------------------------------------------------------------------------
         estilo.parte("explorar", "Explorá por tu cuenta",
               "Mirá cualquier temporada y carrera, o cambiá lo que hizo un piloto antes de largar "
               "y fijate qué predice el modelo"),
-        '<h3 id="todas-las-carreras">Todas las carreras</h3>',
-        grafico("panorama"),
-        nota("Cada carrera la predice un modelo que no la vio. Elegí una temporada en el menú, "
-             "arrastrá sobre la nube para quedarte con un grupo de carreras y hacé clic en la "
-             "leyenda para resaltar dónde ganó cada uno."),
+        '<h3 id="todos-los-pilotos">Todos los pilotos, en todas las carreras</h3>',
+        p(f"Las {n_filas_txt} filas de la página: cada piloto en cada Gran Premio de 2018 a "
+          f"{ANIO_TEST}, con su largada, lo que predijo el modelo y dónde terminó. Filtrá por lo "
+          "que quieras; el resumen y el gráfico cuentan solo lo que queda. Cada carrera "
+          "la predice un modelo que no la vio."),
+        EXPLORADOR,
 
         '<h3 id="una-temporada">Una temporada</h3>',
         '<div class="fila-temporada"><label class="campo">Temporada <select id="temporada">'
@@ -582,8 +951,8 @@ def generar(destino: Path = SITIO) -> Path:
         '<div class="panel" data-panel="campeonato" hidden><div class="grafico"><div class="vista"></div></div></div>',
         # «Carrera por carrera»: los botones «Correr» y «Volver a la largada» los maneja pagina.js
         '<div class="panel" data-panel="autos" hidden><div class="grafico autos">'
-        '<div class="controles-autos"><button id="correr" type="button">Correr</button>'
-        '<button id="largada" type="button">Volver a la largada</button>'
+        '<div class="controles-autos"><button class="correr" type="button">Correr</button>'
+        '<button class="largada" type="button">Volver a la largada</button>'
         '<span id="selector-autos"></span></div>'
         '<div class="marco"><div class="vista"></div></div></div></div>',
         '<div class="panel" data-panel="porque" hidden><div class="grafico"><div class="vista"></div></div></div>',
@@ -593,13 +962,23 @@ def generar(destino: Path = SITIO) -> Path:
           "vuelve a dar un puntaje y lo ordena contra los demás de esa carrera. Los controles "
           "van del mínimo al máximo que vio el modelo al entrenar, así que no se puede cargar "
           "un valor que nunca vio; si uno queda en el 1 % más raro de cada punta, la app avisa."),
-        '<div id="proba">'
+        # un solo panel: a la izquierda lo que se sabe antes de largar, a la derecha la carrera
+        '<div id="proba" class="simulador">'
+        '<div class="sim-datos">'
+        '<h4 class="sim-titulo"><span>1</span> Antes de largar</h4>'
         '<div class="fila-controles"><label class="campo">Carrera <select id="proba-carrera"></select></label>'
         '<label class="campo">Piloto <select id="proba-piloto"></select></label></div>'
-        '<div class="fila-controles controles-modelo" id="proba-controles"></div>'
-        '<div class="aviso" id="proba-avisos" role="status" hidden></div>'
+        '<div class="controles-modelo" id="proba-controles"></div>'
+        '<div class="aviso" id="proba-avisos" role="status" hidden></div></div>'
+        '<div class="sim-carrera">'
+        '<h4 class="sim-titulo"><span>2</span> Lo que predice el modelo</h4>'
         '<div class="metricas" id="proba-resultado" aria-live="polite"></div>'
-        '<p class="nota" id="proba-real"></p><p class="nota" id="proba-nota" hidden></p></div>',
+        '<p class="nota" id="proba-real"></p><p class="nota" id="proba-nota" hidden></p>'
+        '<div class="grafico autos" id="proba-pista"><div class="controles-autos">'
+        '<button class="correr" type="button">Correr animación</button>'
+        '<span class="pista">En rojo, el piloto elegido; en contorno, dónde lo ponía el modelo '
+        'con sus datos reales.</span></div>'
+        '<div class="marco"><div class="vista"></div></div></div></div></div>',
 
         estilo.pie("Grupo 14 · Ciencia de Datos · UTN FRM", f"Datos 2018–{ANIO_TEST}"),
     ]
@@ -624,7 +1003,7 @@ def generar(destino: Path = SITIO) -> Path:
 </style>
 </head>
 <body>
-<aside class="lateral">{estilo.menu(RECORRIDO, EXPLORAR)}</aside>
+<aside class="lateral">{estilo.menu([t.format(n=n_columnas) for t in RECORRIDO], EXPLORAR, {3: [("Dos carreras, paso a paso", "dos-carreras"), ("Qué nos llevamos", "que-nos-llevamos")]})}</aside>
 <main>
 {chr(10).join(cuerpo)}
 </main>

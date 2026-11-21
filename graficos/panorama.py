@@ -20,6 +20,7 @@ from __future__ import annotations
 import altair as alt
 import pandas as pd
 
+from graficos import carreras
 from graficos import colores as C
 from graficos import logos
 
@@ -39,9 +40,11 @@ def tabla(pred: pd.DataFrame) -> pd.DataFrame:
     gp["gp_quien"] = (gp["gp_modelo"] < gp["gp_grilla"]).map({True: "Mejor el modelo", False: "Mejor la grilla"})
     d = d.join(gp, on="Carrera")
     d["Escudería"] = d["TeamId"].map(logos.nombre)
+    d["Gran Premio"] = [carreras.etiqueta(a, r) for a, r in zip(d["Year"], d["RoundNumber"])]
     d["Ganador"] = d.groupby("Carrera")["DriverId"].transform(
         lambda s: s.loc[d.loc[s.index, "Puesto"].idxmin()]).str.replace("_", " ").str.title()
-    return d[["Year", "RoundNumber", "Carrera", "TeamId", "Escudería", "Ganador", "err_modelo", "err_grilla",
+    return d[["Year", "RoundNumber", "Carrera", "Gran Premio", "TeamId", "Escudería", "Ganador",
+              "err_modelo", "err_grilla",
               "abandono", "gp_modelo", "gp_grilla", "gp_abandonos", "gp_quien"]]
 
 
@@ -66,13 +69,13 @@ def panorama(pred: pd.DataFrame, width: int = 430) -> alt.VConcatChart:
     base = alt.Chart(d).transform_filter(por_temporada)
     carreras = base.transform_aggregate(
         gp_modelo="mean(gp_modelo)", gp_grilla="mean(gp_grilla)", gp_abandonos="mean(gp_abandonos)",
-        groupby=["Carrera", "Year", "gp_quien", "Ganador"]
+        groupby=["Carrera", "Gran Premio", "Year", "gp_quien", "Ganador"]
     ).mark_circle(size=70, stroke=C.FONDO, strokeWidth=0.8).encode(
         x=alt.X("gp_grilla:Q", title="Error de la grilla en el GP (puestos)", scale=escala, axis=alt.Axis(**eje)),
         y=alt.Y("gp_modelo:Q", title="Error del modelo en el GP (puestos)", scale=escala, axis=alt.Axis(**eje)),
         color=alt.condition(brush, color_quien, alt.value(C.LINEA)),
         opacity=alt.condition(quien, alt.value(0.9), alt.value(0.12)),
-        tooltip=[alt.Tooltip("Carrera:N"), alt.Tooltip("Ganador:N"),
+        tooltip=[alt.Tooltip("Gran Premio:N"), alt.Tooltip("Ganador:N"),
                  alt.Tooltip("gp_grilla:Q", title="Error grilla", format=".2f"),
                  alt.Tooltip("gp_modelo:Q", title="Error modelo", format=".2f"),
                  alt.Tooltip("gp_abandonos:Q", title="Abandonos", format=".0f")],

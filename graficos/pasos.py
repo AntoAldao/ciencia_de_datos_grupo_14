@@ -77,7 +77,8 @@ def _conteo(largo: pd.DataFrame) -> pd.DataFrame:
 
 
 def _eje_x() -> alt.X:
-    return alt.X("error_bin:O", title="Error en puestos (negativo = lo puso más adelante)",
+    # la misma convención en toda la página: + / derecha = más adelante (ganó puestos)
+    return alt.X("error_bin:O", title="← terminó más atrás  ·  puestos de error  ·  terminó más adelante →",
                  scale=alt.Scale(domain=list(range(-TOPE, TOPE + 1))),
                  axis=alt.Axis(labelAngle=0, values=list(range(-TOPE, TOPE + 1, 5)), **C.EJES))
 
