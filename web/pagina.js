@@ -856,6 +856,24 @@
       "navegador actualizado (Chrome, Firefox, Edge o Safari).</p>";
   });
 
+  // ---- índice lateral: se puede ocultar, y la página recuerda la elección ----------------------
+  const boton = $(".mostrar-indice");
+  function indice(visible) {
+    document.body.classList.toggle("sin-indice", !visible);
+    boton.setAttribute("aria-expanded", String(visible));
+    $(".texto", boton).textContent = visible ? "Ocultar índice" : "Mostrar índice";
+    // los gráficos que se adaptan al ancho se vuelven a medir cuando termina la animación
+    setTimeout(() => window.dispatchEvent(new Event("resize")), 300);
+  }
+  let guardado = null;
+  try { guardado = localStorage.getItem("indice"); } catch (e) { /* sin almacenamiento: queda visible */ }
+  if (guardado === "oculto") indice(false);
+  boton.addEventListener("click", () => {
+    const visible = document.body.classList.contains("sin-indice");
+    indice(visible);
+    try { localStorage.setItem("indice", visible ? "visible" : "oculto"); } catch (e) { /* no importa */ }
+  });
+
   // ---- índice lateral: marca la parte de la página que se está leyendo -------------------------
   const enlaces = [...document.querySelectorAll(".f1-nav-item")];
   const destinos = enlaces.map((a) => document.getElementById(a.getAttribute("href").slice(1)));

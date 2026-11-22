@@ -27,6 +27,7 @@ import numpy as np
 import pandas as pd
 
 import estilo
+from graficos import colores as C
 from graficos import carreras, logos, model_moves, pasos, race_cars, race_errors, season_points, tallo
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -111,6 +112,137 @@ def proceso(pasos: list[tuple[str, str]]) -> str:
 def como_lo_sabemos(*bloques: str) -> str:
     return ('<details class="como"><summary>Cómo lo sabemos</summary><div>'
             + "".join(bloques) + "</div></details>")
+
+
+PILOTO_EJEMPLO = "colapinto"   # el piloto de los ejemplos de la portada
+
+
+def ejemplos_portada(df: pd.DataFrame, piloto: str = PILOTO_EJEMPLO) -> dict:
+    """Dos carreras del test que explican las tarjetas de la portada con un caso real.
+
+    - «termina»: una carrera que terminó y en la que el modelo erró menos que la grilla
+      (la de menor error del modelo y, entre esas, la de mayor error de la grilla).
+    - «abandona»: una carrera que no terminó (la de mayor error de la grilla).
+    Los errores se miden igual que en el notebook: puestos ordenados dentro de cada carrera, y la
+    grilla faltante cuenta como largar último (21). Si el piloto no tiene un caso, se usa el que
+    mejor lo tenga entre todos.
+    """
+    t = df[df["Year"] == ANIO_TEST].copy()
+    car = t["Carrera"]
+    real = t["Puesto"].groupby(car).rank(method="average")
+    grilla = t["Q_GridPosition"].fillna(21).groupby(car).rank(method="average")
+    t["error_modelo"] = (t["puesto_modelo"] - real).abs()
+    t["error_grilla"] = (grilla - real).abs()
+    termino = t["Terminó"] != False  # noqa: E712
+
+    def elegir(filas: pd.DataFrame, orden: list[str], ascendente: list[bool]) -> pd.Series:
+        propias = filas[filas["DriverId"] == piloto]
+        return (propias if len(propias) else filas).sort_values(orden, ascending=ascendente).iloc[0]
+
+    mejores = t[termino & (t["error_modelo"] < t["error_grilla"])]
+    fila_t = elegir(mejores, ["error_modelo", "error_grilla", "RoundNumber"], [True, False, False])
+    fila_a = elegir(t[~termino], ["error_grilla", "RoundNumber"], [False, False])
+
+    def caso(f: pd.Series) -> dict:
+        return {"piloto": f["DriverId"].replace("_", " ").title(), "equipo": f["TeamId"],
+                "gp": carreras.nombre(int(f["Year"]), int(f["RoundNumber"])), "anio": int(f["Year"]),
+                "largo": int(f["Q_GridPosition"]) if pd.notna(f["Q_GridPosition"]) else None,
+                "modelo": int(round(f["puesto_modelo"])), "termino": int(f["Puesto"]),
+                "autos": int(f["Autos_en_carrera"]),
+                "error_modelo": int(round(f["error_modelo"])), "error_grilla": int(round(f["error_grilla"]))}
+
+    return {"termina": caso(fila_t), "abandona": caso(fila_a)}
+
+
+def tarjetas_portada(test: dict, ej: dict, pct_error: float, pct_filas: float,
+                     n_abandonos: int, n_pilotos: int, mae_abandona: float, mae_termina: float) -> str:
+    """Las tres tarjetas de la portada, cada una con su ejemplo. Comparten las mismas filas
+    (rótulo, número, explicación, ejemplo, dibujo y leyenda), así quedan alineadas.
+
+    En reposo, modelo y grilla usan los colores de los gráficos (graficos/colores.py); al pasar el
+    mouse por una tarjeta se encienden los de la escudería del ejemplo (ver .tarjetas-portada en pagina.css).
+    """
+    def pos(puesto: int, autos: int) -> float:         # puesto -> % sobre la recta del 1.º al último
+        return (puesto - 1) / (autos - 1) * 100
+
+    def cabecera(c: dict) -> str:
+        logo = logos.uri(c["equipo"])
+        img = (f'<img src="{logo}" alt="{html.escape(logos.nombre(c["equipo"]))}">' if logo else "")
+        return (f'<div class="quien">{img}{html.escape(c["piloto"])} '
+                f'<span>· {html.escape(c["gp"])} {c["anio"]}</span></div>')
+
+    def recta(puntos: list[tuple[str, int]], tramo: tuple[int, int, str], texto: str, autos: int,
+              etiqueta: str) -> str:
+        desde, hasta, clase = tramo
+        izq, der = sorted((pos(desde, autos), pos(hasta, autos)))
+        marcas = "".join(f'<div class="punto {cl}" style="left:{pos(p, autos):.1f}%"></div>'
+                         for cl, p in puntos)
+        return (f'<div class="pista" role="img" aria-label="{html.escape(etiqueta)}"><div class="linea"></div>'
+                f'<div class="tramo {clase}" style="left:{izq:.1f}%;width:{der - izq:.1f}%"></div>{marcas}'
+                f'<div class="tick" style="left:0%">1.º</div>'
+                f'<div class="tick" style="left:{(izq + der) / 2:.1f}%">{html.escape(texto)}</div>'
+                f'<div class="tick" style="left:100%">{autos}.º</div></div>')
+
+    def leyenda(items: list[tuple[str, str]]) -> str:
+        return ('<div class="leyenda">'
+                + "".join(f'<span><i class="{cl}"></i>{html.escape(t)}</span>' for cl, t in items)
+                + "</div>")
+
+    t, a = ej["termina"], ej["abandona"]
+    largo_t = t["largo"] or t["autos"]
+    largo_a = a["largo"] or a["autos"]
+    tarjeta1 = (
+        '<div class="tarjeta"><span class="rotulo">1 · Entre los que terminan</span>'
+        f'<span class="valor"><span class="m">{fmt(test["mae_modelo_sin_abandonos"])}</span> vs. '
+        f'<span class="g">{fmt(test["mae_grilla_sin_abandonos"])}</span></span>'
+        '<span class="ayuda">puestos de error por piloto: el <b class="m">modelo</b> erra menos que '
+        'la <b class="g">grilla</b>.</span><div class="separador"></div>'
+        f'<div class="caso">{cabecera(t)}Largó {largo_t}.º. El modelo dijo {t["modelo"]}.º y '
+        f'<b>terminó {t["termino"]}.º</b>'
+        + (": acertó justo" if t["error_modelo"] == 0 else f": le erró por {t['error_modelo']}")
+        + f". La grilla le erró por {t['error_grilla']}.</div>"
+        + recta([("g", largo_t), ("m", t["modelo"]), ("r", t["termino"])], (largo_t, t["termino"], "g"),
+                f"error de la grilla: {t['error_grilla']}", t["autos"],
+                f"Largó {largo_t}.º, el modelo dijo {t['modelo']}.º y terminó {t['termino']}.º")
+        + leyenda([("g", f"Largó {largo_t}.º"), ("m", f"Modelo {t['modelo']}.º"),
+                   ("r", f"Terminó {t['termino']}.º")])
+        + "</div>")
+    tarjeta2 = (
+        '<div class="tarjeta"><span class="rotulo">2 · Contando a todos</span>'
+        f'<span class="valor"><span class="m">{fmt(test["mae_modelo"])}</span> vs. '
+        f'<span class="g">{fmt(test["mae_grilla"])}</span></span>'
+        '<span class="ayuda">puestos de error por piloto: con los abandonos, quedan '
+        '<b>casi empatados</b>.</span><div class="separador"></div>'
+        f'<div class="caso">{cabecera(a)}Largó {largo_a}.º y el modelo dijo {a["modelo"]}.º… pero '
+        f'<b>abandonó</b> y quedó {a["termino"]}.º. La grilla le erró por {a["error_grilla"]} y el '
+        f'modelo, por {a["error_modelo"]}.</div>'
+        + recta([("g", largo_a), ("m", a["modelo"]), ("a", a["termino"])],
+                (min(largo_a, a["modelo"]), a["termino"], "a"),
+                f"error: grilla {a['error_grilla']}, modelo {a['error_modelo']}", a["autos"],
+                f"Largó {largo_a}.º, el modelo dijo {a['modelo']}.º, abandonó y quedó {a['termino']}.º")
+        + leyenda([("g", f"Largó {largo_a}.º"), ("m", f"Modelo {a['modelo']}.º"),
+                   ("a", f"Abandonó: {a['termino']}.º")])
+        + "</div>")
+    tarjeta3 = (
+        '<div class="tarjeta abandonos"><span class="rotulo">3 · Por qué se empatan</span>'
+        f'<span class="valor"><span class="a">{pct_error:.0f}%</span></span>'
+        f'<span class="ayuda">del error lo aportan los <b>abandonos</b>, que son apenas 1 de cada '
+        f'{round(100 / pct_filas)} pilotos.</span><div class="separador"></div>'
+        f'<div class="caso"><div class="quien"><span class="icono">✕</span>Los {n_abandonos} abandonos '
+        f'<span>· test {ANIO_TEST}</span></div>Al que abandona se le erra por '
+        f'<b>{fmt(mae_abandona, 1)}</b> puestos; al que termina, por <b>{fmt(mae_termina, 1)}</b>. Y '
+        'nadie puede anticipar quién abandona.</div>'
+        f'<div class="barras" role="img" aria-label="Abandonos: {pct_filas:.0f}% de los pilotos y '
+        f'{pct_error:.0f}% del error">'
+        f'<div class="barra pilotos"><span>de los pilotos</span><div class="fondo"><div class="lleno" '
+        f'style="width:{pct_filas:.0f}%"></div></div><b>{pct_filas:.0f}%</b></div>'
+        f'<div class="barra error"><span>del error</span><div class="fondo"><div class="lleno" '
+        f'style="width:{pct_error:.0f}%"></div></div><b>{pct_error:.0f}%</b></div></div>'
+        + leyenda([("a", f"Abandonaron: {n_abandonos} de {n_pilotos} pilotos")])
+        + "</div>")
+    return (f'<div class="tarjetas-portada" style="--c-modelo:{C.MODELO};--c-grilla:{C.GRILLA};'
+            f'--c-grilla-punto:{C.GRILLA};--c-abandono:{C.ABANDONO}">'
+            f"{tarjeta1}{tarjeta2}{tarjeta3}</div>")
 
 
 def metrica(rotulo: str, valor: str, ayuda: str) -> str:
@@ -331,6 +463,11 @@ def generar(destino: Path = SITIO) -> Path:
     nombre_modelo = resumen["modelo"]["elegido"]
     pct_error_abandonos = valor_nb("Peso de los abandonos", "% del error absoluto total que explican")
     pct_filas_abandonos = valor_nb("Peso de los abandonos", "% de las filas")
+    _, filas_peso = tabla_nb("Peso de los abandonos")
+    fila_peso = lambda nombre: next(f for f in filas_peso if f[0] == nombre)  # noqa: E731
+    n_abandonos_test = int(float(fila_peso("Filas")[1].replace(",", ".")))
+    n_pilotos_test = test["filas"]
+    mae_terminan_test = float(fila_peso("MAE de esas filas")[-1].replace(",", "."))   # «Resto de las filas»
     ultima = df[df["Year"] == ANIO_TEST]
     ultima = ultima[ultima["RoundNumber"] == ultima["RoundNumber"].max()]
     equipos = (ultima.groupby("TeamId")["TeamPoints_Before"].max()
@@ -611,18 +748,12 @@ def generar(destino: Path = SITIO) -> Path:
         "antes de la carrera?</h1>",
         '<p class="idea">El modelo ordena mejor que la grilla a los pilotos que terminan la carrera, '
         "pero los abandonos, que nadie anticipa, se comen esa ventaja.</p>",
-        '<div class="metricas">',
-        metrica("Error sin abandonos: modelo vs. grilla",
-                f"{fmt(test['mae_modelo_sin_abandonos'])} vs. {fmt(test['mae_grilla_sin_abandonos'])}",
-                "Puestos de error promedio por piloto, solo los que terminaron (test 2026)."),
-        metrica("Error con todos los pilotos: modelo vs. grilla",
-                f"{fmt(test['mae_modelo'])} vs. {fmt(test['mae_grilla'])}",
-                "Con los abandonos incluidos quedan casi empatados (test 2026)."),
-        metrica("Parte del error que explican los abandonos", f"{pct_error_abandonos:.0f}%",
-                f"Son el {pct_filas_abandonos:.0f}% de los pilotos del test 2026."),
-        "</div>",
-        nota(f"Test: las {test['carreras']} carreras de {ANIO_TEST}, que el modelo no vio al "
-             "entrenar. Error = cuántos puestos se equivoca en promedio con cada piloto."),
+        tarjetas_portada(test, ejemplos_portada(df), pct_error_abandonos, pct_filas_abandonos,
+                         n_abandonos_test, n_pilotos_test,
+                         valor_nb("Peso de los abandonos", "MAE de esas filas"),
+                         mae_terminan_test),
+        nota("Error = cuántos puestos hay entre donde lo puso la predicción y donde terminó. "
+             f"Test: las {test['carreras']} carreras de {ANIO_TEST}, que el modelo no vio al entrenar."),
         "<hr>",
         estilo.parte("recorrido", "El recorrido", "De los datos al modelo, en tres sectores"),
 
@@ -1003,7 +1134,9 @@ def generar(destino: Path = SITIO) -> Path:
 </style>
 </head>
 <body>
-<aside class="lateral">{estilo.menu([t.format(n=n_columnas) for t in RECORRIDO], EXPLORAR, {3: [("Dos carreras, paso a paso", "dos-carreras"), ("Qué nos llevamos", "que-nos-llevamos")]})}</aside>
+<button class="mostrar-indice" type="button" aria-controls="indice" aria-expanded="true">
+  <span class="flecha" aria-hidden="true">‹</span><span class="texto">Ocultar índice</span></button>
+<aside class="lateral" id="indice">{estilo.menu([t.format(n=n_columnas) for t in RECORRIDO], EXPLORAR, {3: [("Dos carreras, paso a paso", "dos-carreras"), ("Qué nos llevamos", "que-nos-llevamos")]})}</aside>
 <main>
 {chr(10).join(cuerpo)}
 </main>
