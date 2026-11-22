@@ -70,6 +70,43 @@ def fmt(x: float, decimales: int = 2) -> str:
     return f"{x:.{decimales}f}".replace(".", ",")
 
 
+def alpha_legible(valor: str) -> str:
+    """«1000,0000» -> «1.000» y «0,0100» -> «0,01»: sin ceros de más y con punto de miles."""
+    x = float(valor.replace(",", "."))
+    if x >= 1:
+        return f"{x:,.0f}".replace(",", ".")
+    return f"{x:g}".replace(".", ",")
+
+
+# Nombre simple de cada entrada del modelo (tabla «En qué se apoya»); el técnico va entre paréntesis.
+NOMBRE_SIMPLE = {
+    "Q_GridPosition": "Puesto de largada",
+    "DriverPoints_Before_DBT_%": "Puntos en el campeonato (distancia al líder)",
+    "Q_Best_seconds_DBT_%": "Mejor tiempo de clasificación (distancia al más rápido)",
+    "FP_LapTime_min_SOFT_DBT_%": "Mejor vuelta en prácticas con blandas",
+    "FP_LapTime_min_MED_DBT_%": "Mejor vuelta en prácticas con medias",
+    "FP_LapTime_min_HARD_DBT_%": "Mejor vuelta en prácticas con duras",
+    "FP_Desgaste_SOFT": "Desgaste de las blandas",
+    "FP_Desgaste_MED": "Desgaste de las medias",
+}
+
+
+def nombre_con_tecnico(tecnico: str) -> str:
+    """«Q_GridPosition» -> «Puesto de largada (Q_GridPosition)»; también los productos y los
+    indicadores de faltante. Si no lo conoce, lo deja como está."""
+    def simple(nombre: str) -> str | None:
+        if " × " in nombre:
+            partes = [simple(x) for x in nombre.split(" × ")]
+            return None if None in partes else " × ".join(
+                [partes[0]] + [x[0].lower() + x[1:] for x in partes[1:]])
+        if nombre.startswith("missingindicator_"):
+            base = simple(nombre.removeprefix("missingindicator_"))
+            return None if base is None else "Faltaba el dato: " + base[0].lower() + base[1:]
+        return NOMBRE_SIMPLE.get(nombre)
+    s = simple(tecnico)
+    return tecnico if s is None else f"{s} ({tecnico})"
+
+
 # ---- HTML chico ----------------------------------------------------------------------------------
 def md(texto: str) -> str:
     """Lo poco de Markdown que usan los textos: **negrita** y [enlaces](url)."""
@@ -226,8 +263,8 @@ def tarjetas_portada(test: dict, ej: dict, pct_error: float, pct_filas: float,
     tarjeta3 = (
         '<div class="tarjeta abandonos"><span class="rotulo">3 · Por qué se empatan</span>'
         f'<span class="valor"><span class="a">{pct_error:.0f}%</span></span>'
-        f'<span class="ayuda">del error lo aportan los <b>abandonos</b>, que son apenas 1 de cada '
-        f'{round(100 / pct_filas)} pilotos.</span><div class="separador"></div>'
+        f'<span class="ayuda">del error lo aportan los <b>abandonos</b>, que en {ANIO_TEST} son '
+        f'apenas 1 de cada {round(100 / pct_filas)} pilotos.</span><div class="separador"></div>'
         f'<div class="caso"><div class="quien"><span class="icono">✕</span>Los {n_abandonos} abandonos '
         f'<span>· test {ANIO_TEST}</span></div>Al que abandona se le erra por '
         f'<b>{fmt(mae_abandona, 1)}</b> puestos; al que termina, por <b>{fmt(mae_termina, 1)}</b>. Y '
@@ -497,6 +534,7 @@ def generar(destino: Path = SITIO) -> Path:
     blandas = cv["por_goma"]["SOFT"] | {"mejor_txt": tallo._reloj(cv["por_goma"]["SOFT"]["mejor"]),
                                         "promedio_txt": tallo._reloj(cv["por_goma"]["SOFT"]["promedio"])}
     cg = tallo.cifras_grilla(df)                 # los números del texto del Sector 2
+    red_bull = df[df["TeamId"] == "red_bull"].groupby("Year")["Puesto"].mean()   # Sector 1
     pct = lambda x: f"{x:.0%}".replace("%", "\u00a0%")  # noqa: E731
     sq, sq_t = cg["se_queda"], cg["se_queda_terminaron"]
     n_term_txt = f"{cg['n_terminaron']:,}".replace(",", ".")
@@ -789,7 +827,8 @@ def generar(destino: Path = SITIO) -> Path:
         p("**Qué salió y por qué.** Cada barra gris es un grupo de datos que sacamos, con el "
           "motivo al lado. Tres reglas: **solo lo que se sabe antes de largar**; **que sirva para "
           "carreras futuras** (quién es el equipo no se sostiene: el puesto promedio de Red Bull "
-          "pasa de 3,6 en 2023 a 9,1 en 2026), y **que diga algo nuevo** (la telemetría repetía "
+          f"pasa de {fmt(red_bull[2023], 1)} en 2023 a {fmt(red_bull[ANIO_TEST], 1)} en "
+          f"{ANIO_TEST}), y **que diga algo nuevo** (la telemetría repetía "
           "lo que ya dice la grilla)."),
         grafico("columnas"),
         "</div>",
@@ -876,7 +915,9 @@ def generar(destino: Path = SITIO) -> Path:
             f"**{fmt(df['Q_GridPosition'].corr(df['Puesto'], method='spearman'), 3)}** (en el EDA, "
             "0,625). Entra al modelo y es la columna que más pesa.\n"
             "- **Una que no se sostuvo (H3, «la velocidad en prácticas anticipa el resultado»):** "
-            "la velocidad de la vuelta rápida se asocia con el resultado (Spearman −0,303), pero "
+            "la velocidad de la vuelta rápida se asocia con el resultado (Spearman "
+            f"{fmt(df['FP_Speed_fastlap_DBT_%'].corr(df['Puesto'], method='spearman'), 3)}: "
+            "cuanto más lejos de la velocidad del más rápido, más atrás termina), pero "
             "porque los autos rápidos largan adelante: descontando la grilla, la correlación parcial "
             "cae a **0,129**. Sale todo el bloque de telemetría. Tampoco se sostuvo que el desgaste "
             "de gomas predijera solo (H7: correlación −0,009).\n"
@@ -1006,7 +1047,8 @@ def generar(destino: Path = SITIO) -> Path:
             p("**El ajuste del elegido.** Probamos distintos valores de alpha "
               "(cuánto se achican los coeficientes) con la misma validación "
               "por temporada. Ordenados de mejor a peor:"),
-            (lambda columnas, filas: tabla_html(columnas[1:], [f[1:] for f in filas], indice=False))(
+            (lambda columnas, filas: tabla_html(
+                columnas[1:], [[alpha_legible(f[1]), *f[2:]] for f in filas], indice=False))(
                 *tabla_nb("Lineal (elegido)")),
             nota(f"Nos quedamos con el primero ({resumen['modelo']['hiperparametros'].get('modelo', '')}). "
                  "La curva es casi plana: entre los mejores la diferencia está muy por "
@@ -1037,7 +1079,9 @@ def generar(destino: Path = SITIO) -> Path:
               "Un peso positivo aumenta ese puntaje y tiende a ubicarlos "
               "más atrás; uno negativo, más adelante, manteniendo "
               "las demás entradas iguales."),
-            tabla_html(*tabla_nb("Coeficientes del modelo final")),
+            (lambda columnas, filas: tabla_html(
+                columnas, [[nombre_con_tecnico(f[0]), *f[1:]] for f in filas]))(
+                *tabla_nb("Coeficientes del modelo final")),
             nota("Los pesos corresponden a variables transformadas y escaladas: "
                  "no son puestos ganados o perdidos por cada unidad original "
                  "ni demuestran una relación causal.")),
