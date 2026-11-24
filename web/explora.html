@@ -1,0 +1,119 @@
+<p class="bajada">Más allá del modelo: los {n_filas} resultados de {desde} a {hasta}, para recorrerlos como quieras. Todo lo que
+    armes queda en el link, así se lo podés pasar a alguien.</p>
+
+  <nav class="subnav" id="ex-subnav">
+    <a href="#ex-records">Récords</a><a href="#ex-pilotos">Pilotos</a><a href="#ex-armar">Armá tu gráfico</a>
+    <a href="#ex-conectado">Todo conectado</a><a href="#ex-movimiento">Carrera de escuderías</a><a href="#ex-quien">¿Quién gana?</a>
+    <button class="compartir" id="ex-compartir" type="button" title="Copiar el link de lo que estoy viendo">🔗 Copiar link</button>
+  </nav>
+
+  <!-- 1 · récords ======================================================================== -->
+  <section class="parte" id="ex-records">
+    <h3><span class="num">1</span>Récords y rarezas</h3>
+    <p class="bajada">Lo más llamativo de los datos, calculado de los datos. Tocá «Ver» para ir al gráfico o al piloto.</p>
+    <div class="records" id="ex-records-lista"></div>
+    <button class="otro" id="ex-otro" type="button">Mostrame otros ↻</button>
+  </section>
+
+  <!-- 2 · pilotos ======================================================================== -->
+  <section class="parte" id="ex-pilotos">
+    <h3><span class="num">2</span>Pilotos, cara a cara</h3>
+    <p class="bajada">Elegí un piloto para ver su ficha, o dos para compararlos.</p>
+    <div class="duelo-sel">
+      <label class="campo">Piloto<select id="ex-pa"></select></label><span class="vs">vs.</span>
+      <label class="campo">Contra<select id="ex-pb"></select></label>
+    </div>
+    <div class="fichas" id="ex-fichas"></div>
+    <p class="cara" id="ex-cara"></p>
+    <div class="graf"><h4>Puesto final promedio, temporada por temporada <span class="leyenda-pilotos" id="ex-leyenda-pilotos"></span></h4><div id="ex-g-pilotos" style="width:100%"></div></div>
+  </section>
+
+  <!-- 3 · armá tu gráfico ================================================================ -->
+  <section class="parte" id="ex-armar">
+    <h3 class="titulo-armar"><span class="num">3</span>Armá tu gráfico</h3>
+    <div class="banda-preguntas"><span class="titulo">¿No sabés por dónde empezar? Probá:</span>
+      <button class="flecha-p" type="button" data-d="-1" aria-label="Anteriores">‹</button>
+      <div class="preguntas" id="ex-preguntas"></div>
+      <button class="flecha-p" type="button" data-d="1" aria-label="Más preguntas">›</button></div>
+    <div class="armador">
+      <div class="ex-panel">
+        <div class="bloque"><h4>1 · Tipo de gráfico</h4><div class="tipos" id="ex-tipos"></div></div>
+        <div class="bloque"><h4>2 · Qué cruzar</h4>
+          <label class="campo" id="ex-c-x"><span class="et">Eje horizontal</span><select id="ex-x"></select></label>
+          <label class="campo" id="ex-c-y"><span class="et">Eje vertical</span><select id="ex-y"></select></label>
+          <label class="campo" id="ex-c-medida"><span>Medida</span><select id="ex-medida">
+            <option value="mean">Promedio</option><option value="median">Mediana</option><option value="count">Cantidad de filas</option></select></label>
+          <label class="campo" id="ex-c-color"><span>Color</span><select id="ex-color"></select></label>
+          <label class="campo" id="ex-c-escala"><span>Escala del eje</span><select id="ex-escala">
+            <option value="auto">Automática</option><option value="centro">Acercar al centro (sin casos raros)</option>
+            <option value="cero">Que empiece en 0</option><option value="log">Logarítmica (achica lo grande)</option></select></label>
+          <label class="casilla" id="ex-c-tendencia"><input type="checkbox" id="ex-tendencia"> Mostrar la tendencia</label>
+          <label class="casilla" id="ex-c-extremos"><input type="checkbox" id="ex-extremos" checked> Sacar el 1 % más extremo</label>
+        </div>
+      </div>
+      <div class="derecha">
+        <div class="ex-panel filtros-barra"><h4>3 · Filtros <span class="activos" id="ex-activos"></span></h4>
+          <div class="fila-filtros">
+            <label class="campo">Desde<select id="ex-desde"></select></label>
+            <label class="campo">Hasta<select id="ex-hasta"></select></label>
+            <label class="campo">Escudería<select id="ex-f-equipo"></select></label>
+            <label class="campo">Piloto<select id="ex-f-piloto"></select></label>
+            <label class="campo">Resultado<select id="ex-f-resultado"><option value="">Todos</option><option>Terminó</option><option>Abandonó</option></select></label>
+            <label class="campo">Zona de largada<select id="ex-f-zona"><option value="">Todas</option><option>1–5</option><option>6–10</option><option>11–15</option><option>16 o más</option></select></label>
+            <button class="limpiar" id="ex-limpiar" type="button" title="Sacar los filtros">✕ Sacar</button>
+          </div>
+        </div>
+      <div class="ex-panel lienzo">
+        <div class="cabeza"><p class="titulo-grafico" id="ex-titulo"></p>
+          <div class="acciones"><span class="cuenta" id="ex-cuenta"></span>
+            <button type="button" id="ex-csv" title="Descargar estas filas (CSV)">⬇ CSV</button>
+            <button type="button" id="ex-png" title="Descargar el gráfico (PNG)">⬇ PNG</button></div></div>
+        <p class="lectura" id="ex-lectura"></p><p class="aviso" id="ex-aviso" hidden></p>
+        <p class="zoom-ayuda" id="ex-zoom-ayuda">🖱 Rueda: acercar o alejar · Arrastrar: mover · Doble clic: volver a como estaba</p>
+        <div id="ex-vista"></div>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · todo conectado ================================================================ -->
+  <section class="parte" id="ex-conectado">
+    <h3><span class="num">4</span>Todo conectado</h3>
+    <p class="bajada">Tres preguntas sobre los mismos datos. <b>Tocá una barra o marcá un tramo arrastrando</b> y las
+      otras dos respuestas cambian para mostrar solo eso. Por ejemplo: tocá <i>Ferrari</i> y mirá en qué años abandonó más.</p>
+    <div class="mirando" id="ex-mirando"></div>
+    <div class="graf"><h4>¿Cuántos abandonan cada temporada?</h4><p class="ayuda-g">Tocá un año para quedarte solo con ese.</p><div id="ex-g-con-a"></div></div>
+    <div class="graf"><h4>El que larga en cada puesto, ¿dónde termina?</h4><p class="ayuda-g">Arrastrá sobre el gráfico para elegir un tramo de largada (por ejemplo, del 15 al 20).</p><div id="ex-g-con-b"></div></div>
+    <div class="graf"><h4>¿Qué escudería remonta más en carrera?</h4><p class="ayuda-g">Puestos que gana por carrera, en promedio, entre los que terminaron. Tocá una escudería.</p><div id="ex-g-con-c"></div></div>
+  </section>
+
+  <!-- 5 · temporadas en movimiento ======================================================= -->
+  <section class="parte" id="ex-movimiento">
+    <h3><span class="num">5</span>La carrera de las escuderías</h3>
+    <p class="bajada">¿Quién dominó cada año? Dale ▶ y mirá cómo cambia el ranking de podios de 2018 a 2026,
+      o mové la barra para ir a un año.</p>
+    <div class="graf">
+      <div class="reproductor"><button class="play" id="ex-play" type="button" aria-label="Reproducir">▶</button>
+        <span class="anio-grande" id="ex-anio-mov">2018</span>
+        <input type="range" id="ex-anio-slider" min="0" max="8" value="0" style="flex:1;max-width:420px;accent-color:var(--f1-rojo)">
+        <div class="modo" id="ex-modo"><button type="button" data-m="anio" class="activo">Ese año</button><button type="button" data-m="acum">Sumados desde 2018</button></div></div>
+      <p class="lectura-mov" id="ex-lectura-mov"></p>
+      <div id="ex-g-movimiento" style="width:100%"></div>
+    </div>
+  </section>
+
+  <!-- 6 · ¿quién gana? ================================================================== -->
+  <section class="parte" id="ex-quien">
+    <h3><span class="num">6</span>¿Quién gana?</h3>
+    <p class="bajada">Una carrera real, con lo que se sabía antes de largar. Elegí tu podio tocando tres pilotos en orden
+      y después mirá qué pasó. ¿Le ganás a la grilla? ¿Y al modelo?</p>
+    <div class="juego">
+      <div class="graf" style="margin-top:0"><h4 id="ex-q-titulo"></h4><table id="ex-q-tabla"></table></div>
+      <div>
+        <p class="marcador" id="ex-marcador"></p>
+        <div class="botones"><button class="principal" id="ex-revelar" type="button" disabled>Ver el resultado</button>
+          <button id="ex-borrar" type="button">Borrar mi podio</button><button id="ex-otra" type="button">Otra carrera ↻</button></div>
+        <div class="podios" id="ex-podios" style="margin-top:12px"></div>
+      </div>
+    </div>
+  </section>

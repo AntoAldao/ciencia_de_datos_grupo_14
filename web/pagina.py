@@ -29,6 +29,7 @@ import pandas as pd
 import estilo
 from graficos import colores as C
 from graficos import carreras, logos, model_moves, pasos, race_cars, race_errors, season_points, tallo
+from web import explora
 
 RAIZ = Path(__file__).resolve().parent.parent
 WEB = Path(__file__).resolve().parent
@@ -59,7 +60,8 @@ CONTROLES = [   # (columna, etiqueta, paso, decimales)
 ]
 # el menú lateral: versiones cortas de los títulos de cada sector («{n}»: columnas del pipeline)
 RECORRIDO = ["Los datos: de {n} a 8", "La largada y los abandonos", "El modelo contra la grilla"]
-EXPLORAR = [("Todos los pilotos", "todos-los-pilotos", "⌕"),   # (texto, ancla, ícono)
+EXPLORAR = [("Explorá los datos", "explora-los-datos", "✦"),   # (texto, ancla, ícono)
+            ("Todos los pilotos", "todos-los-pilotos", "⌕"),
             ("Una temporada", "una-temporada", "▤"),
             ("Probá el modelo", "proba-el-modelo", "⚙")]
 PESTANIAS = [("errores", "Error por carrera"), ("campeonato", "Campeonato"),
@@ -768,6 +770,8 @@ def generar(destino: Path = SITIO) -> Path:
                             autos["DriverId"], autos["Puesto"], autos["Terminó"], valores)]}
     datos["casos"] = {"entrada": entrada, "carreras": casos_carreras}
     datos["pilotos"] = tabla_pilotos(tablas, df)
+    # «Explorá los datos»: los datos crudos para recorrer (ver web/explora.py)
+    explora_html, datos["explora"], config_explora = explora.armar(df)
 
     config = {
         "anioTest": ANIO_TEST, "anios": anios, "modelo": modelo,
@@ -1105,8 +1109,10 @@ def generar(destino: Path = SITIO) -> Path:
 
         # ---- Copa ----------------------------------------------------------------------------------
         estilo.parte("explorar", "Explorá por tu cuenta",
-              "Mirá cualquier temporada y carrera, o cambiá lo que hizo un piloto antes de largar "
-              "y fijate qué predice el modelo"),
+              "Recorré los datos como quieras, mirá cualquier temporada y carrera, o cambiá lo que "
+              "hizo un piloto antes de largar y fijate qué predice el modelo"),
+        '<h3>Explorá los datos</h3>',
+        explora_html,
         '<h3 id="todos-los-pilotos">Todos los pilotos, en todas las carreras</h3>',
         p(f"Las {n_filas_txt} filas de la página: cada piloto en cada Gran Premio de 2018 a "
           f"{ANIO_TEST}, con su largada, lo que predijo el modelo y dónde terminó. Filtrá por lo "
@@ -1175,6 +1181,7 @@ def generar(destino: Path = SITIO) -> Path:
 <style>
 {(ASSETS / "estilo.css").read_text(encoding="utf-8")}
 {leer_web("pagina.css")}
+{leer_web("explora.css")}
 </style>
 </head>
 <body>
@@ -1191,6 +1198,10 @@ def generar(destino: Path = SITIO) -> Path:
 </script>
 <script>
 {en_script(leer_web("pagina.js"))}
+</script>
+<script type="application/json" id="config-explora">{en_script(json.dumps(config_explora, ensure_ascii=False))}</script>
+<script>
+{en_script(leer_web("explora.js"))}
 </script>
 </body>
 </html>
