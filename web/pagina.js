@@ -332,7 +332,9 @@
   for (const evento of ["wheel", "touchstart"]) {
     window.addEventListener(evento, () => { conFlechas = false; }, { passive: true });
   }
+  let navegando = false;   // mientras un enlace del índice lleva a su sección (ver `irA`)
   function acomodar() {
+    if (navegando) return;
     if (objetivo !== null) {            // es el scroll del propio acomodo: no se encadena
       if (Math.abs(window.scrollY - objetivo) < 6) soltarObjetivo();
       return;
@@ -692,10 +694,30 @@
     };
     const valorReal = (f, col) => col.startsWith("FP_Desgaste_")
       ? desgaste(f, col.slice("FP_Desgaste_".length)) : (esNaN(f[col]) ? NaN : f[col]);
-    // la largada llega hasta el último auto de la carrera (en 2026 son 22; al entrenar, 20)
-    let nAutos = 20;
-    const tope = (c) => c.col === GRILLA ? Math.max(c.rango[1], nAutos) : Math.min(c.rango[1], c.habitual[1] * 3);
     const recortar = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+    /* Hasta dónde va cada control: lo que hubo en ESA carrera, del mejor al peor, con un margen
+       del 15 % para poder ponerlo un poco más lejos que el último. La largada, de 1 al último
+       auto; el campeonato, de 0 a 100 %. Si nadie de la carrera tiene el dato (p. ej. nadie usó
+       dura), el 98 % central del entrenamiento. Un piloto muy raro de la carrera (p. ej. uno que
+       dio una sola vuelta lenta) no estira la barra más allá de ese 98 %, salvo que sea el
+       elegido. Al menos 10 pasos de ancho, y nunca sale de lo que
+       vio el modelo. */
+    const redondo = (x) => Number(x.toFixed(6));
+    function limites(c, valores, actual) {
+      if (c.col === GRILLA) return [1, valores.length];
+      const hay = valores.filter((v) => !esNaN(v));
+      let lo, hi;
+      if (hay.length < 2) { [lo, hi] = c.habitual; }
+      else {
+        const min = Math.min(...hay), max = Math.max(...hay), margen = Math.max((max - min) * 0.15, c.paso);
+        lo = min - margen;
+        hi = Math.min(max + margen, Math.max(c.habitual[1], esNaN(actual) ? -Infinity : actual + margen));
+      }
+      if (hi - lo < 10 * c.paso) hi = lo + 10 * c.paso;
+      lo = Math.floor(Math.max(lo, c.rango[0]) / c.paso) * c.paso;
+      hi = Math.ceil(Math.min(hi, c.rango[1]) / c.paso) * c.paso;
+      return hi > lo ? [redondo(lo), redondo(hi)] : [c.rango[0], c.rango[1]];
+    }
 
     const carreras = Object.keys(casos.carreras).sort().reverse();
     selCarrera.replaceChildren(...carreras.map((c) => new Option(casos.carreras[c].nombre, c)));
@@ -709,8 +731,7 @@
 
     function elegirPiloto() {         // controles en sus valores reales
       const autos = casos.carreras[selCarrera.value].pilotos;
-      nAutos = autos.length;
-      const real = fila(autos.find((p) => p.id === selPiloto.value));
+      const filas = autos.map(fila), real = filas[autos.findIndex((p) => p.id === selPiloto.value)];
       estado = {};
       cajaControles.replaceChildren();
       // primero lo que más mueve la predicción (largada, clasificación, campeonato); las
@@ -719,9 +740,10 @@
       practicas.className = "mas-practicas";
       practicas.innerHTML = "<summary>Más datos de prácticas</summary><div class=\"controles-modelo\"></div>";
       CFG.controles.forEach((c, n) => {
-        const actual = valorReal(real, c.col), lo = c.rango[0], hi = tope(c);
-        const inicio = esNaN(actual) ? (esNaN(c.mediana) ? (lo + c.rango[1]) / 2 : c.mediana) : actual;
-        estado[c.col] = { sinDato: esNaN(actual), valor: recortar(inicio, lo, hi) };
+        const valores = filas.map((f) => valorReal(f, c.col));
+        const actual = valorReal(real, c.col), [lo, hi] = limites(c, valores, actual);
+        const inicio = esNaN(actual) ? (esNaN(c.mediana) ? (lo + hi) / 2 : c.mediana) : actual;
+        estado[c.col] = { sinDato: esNaN(actual), valor: recortar(inicio, lo, hi), lo, hi };
 
         const caja = document.createElement("div");
         caja.className = "control";
@@ -763,7 +785,7 @@
         const e = estado[c.col], actual = valorReal(filas[i], c.col);
         const valor = e.sinDato ? NaN : e.valor;
         if (!e.sinDato) {
-          if (!esNaN(actual) && !(c.rango[0] <= actual && actual <= tope(c))) {
+          if (!esNaN(actual) && !(e.lo <= actual && actual <= e.hi)) {
             avisos.push("<strong>" + c.etiqueta + "</strong>: su valor real (" + coma(actual, 2) +
               ") está fuera de lo que permite el control; se recortó.");
           } else if (!(c.habitual[0] <= valor && valor <= c.habitual[1])) {
@@ -791,6 +813,8 @@
       const despues = ModeloF1.puestos(puntajes);
       const delta = antes[i] - despues[i];
       pintarPista(autos, filas.map((f, k) => (k === i ? caso : f)), i, puntajes, puntajesAntes, despues, antes);
+      ultimosAportes = [autos[i], filas.map((f, k) => (k === i ? caso : f)), filas, i, despues[i]];
+      pintarAportes(...ultimosAportes);
 
       const cajaAvisos = $("#proba-avisos");
       cajaAvisos.hidden = !avisos.length;
@@ -812,6 +836,100 @@
         "carrera. En «Explorá», en cambio, las carreras de " + carrera.anio + " las predice un modelo " +
         "entrenado sin esa temporada, así que el puesto puede diferir en algunos lugares. Para un caso " +
         "sin sesgo, elegí una carrera de " + CFG.anioTest + ".";
+    }
+
+    /* Qué mueve al elegido, a la derecha de la pista: la misma cuenta que «Por qué el modelo
+       mueve a cada piloto» (graficos/model_moves.py). La largada es la base; un lugar de grilla
+       vale k = coef / desvío de la largada en puntaje, y cada grupo corre al piloto
+       −Σ (aporte − promedio de la carrera) / k lugares (+ = lo adelanta). Se compara con lo que
+       daban sus datos reales, para ver qué cambió al mover los controles. */
+    const varGrilla = modelo.variables.find((v) => v.nombre === GRILLA);
+    const kGrilla = varGrilla.coef / varGrilla.desvio;
+    function ganancias(filasCarrera, i) {
+      const ap = filasCarrera.map((f) => ModeloF1.aportes(modelo, f)), n = ap.length;
+      const lugares = (v) => -(ap[i][v] - ap.reduce((s, a) => s + a[v], 0) / n) / kGrilla;
+      return CFG.grupos.map((g) => g.variables.reduce((s, v) => s + lugares(v), 0));
+    }
+    // si la pista cambia de alto (ventana más angosta o más ancha), la barra se vuelve a medir
+    let ultimosAportes = null;
+    if ("ResizeObserver" in window) {
+      new ResizeObserver(() => { if (ultimosAportes) pintarAportes(...ultimosAportes); })
+        .observe($(".marco", cajaPista));
+    }
+    const signo = (x, d = 1) => (x >= 0.05 ? "+" : x <= -0.05 ? "−" : "") + coma(Math.abs(x), d);
+
+    function pintarAportes(piloto, filasCaso, filasReales, i, puesto) {
+      const caja = $("#proba-aportes");
+      if (!caja) return;
+      const ahora = ganancias(filasCaso, i), antes = ganancias(filasReales, i);
+      const suma = (gs) => gs.reduce((s, x) => s + x, 0);
+      const total = suma(ahora), totalReal = suma(antes);
+      const largada = filasCaso[i][GRILLA];
+      // el modelo ordena a todos por «largada − total» (sin largada, completa con 21, como el
+      // modelo): esa es la largada equivalente, y su orden en la carrera es el puesto predicho
+      const equivalente = (esNaN(largada) ? 21 : largada) - total;
+
+      // la barra: un solo apilado vertical, arriba lo que lo adelanta y abajo lo que lo atrasa
+      // escala fija de −22 a +22 lugares (una grilla entera): no salta al mover ni al cambiar de
+      // piloto, y se puede comparar entre pilotos. Lo que se pase, queda en el borde.
+      const tope = 22;
+      armarAportes(caja, 260);
+      // al lado de la pista, el panel ocupa lo mismo que la pista: la barra se estira (o achica)
+      // hasta que el borde de abajo del panel coincida con el de la pista
+      const marco = $("#proba-pista .marco");
+      const alLado = getComputedStyle(caja.parentElement).gridTemplateColumns.trim().split(/\s+/).length > 1;
+      if (alLado && marco && marco.offsetHeight) {
+        const usado = caja.lastElementChild.getBoundingClientRect().bottom - caja.getBoundingClientRect().top;
+        const alto = Math.max(160, Math.round(260 + marco.offsetHeight - usado));
+        if (alto !== 260) armarAportes(caja, alto);
+      }
+
+      function armarAportes(caja, ALTO) {
+      const ANCHO = 26, X = 26, y = (v) => ALTO / 2 - (recortar(v, -tope, tope) / tope) * (ALTO / 2);
+      let arriba = 0, abajo = 0, rects = "";
+      ahora.forEach((x, g) => {
+        if (Math.abs(x) < 1e-6) return;
+        const desde = x > 0 ? arriba : -abajo, hasta = desde + x;
+        if (x > 0) arriba += x; else abajo -= x;
+        rects += '<rect x="' + X + '" width="' + ANCHO + '" y="' + Math.min(y(desde), y(hasta)) +
+          '" height="' + Math.abs(y(desde) - y(hasta)) + '" fill="' + CFG.grupos[g].color +
+          '" stroke="var(--f1-panel)" stroke-width="1"><title>' + CFG.grupos[g].nombre + ": " +
+          signo(x) + " lugares</title></rect>";
+      });
+      const marcas = [tope, tope / 2, 0, -tope / 2, -tope].map((v) =>
+        '<text x="' + (X - 5) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + (v > 0 ? "+" : v < 0 ? "−" : "") +
+        Math.abs(v) + "</text>").join("");
+      const svg = '<svg width="60" height="' + (ALTO + 44) + '" viewBox="0 -22 60 ' + (ALTO + 44) + '" role="img" ' +
+        'aria-label="Total: ' + signo(total) + ' lugares respecto de su largada">' +
+        '<text x="' + (X + ANCHO / 2) + '" y="-12" text-anchor="middle">▲ adelanta</text>' +
+        '<text x="' + (X + ANCHO / 2) + '" y="' + (ALTO + 18) + '" text-anchor="middle">▼ atrasa</text>' +
+        marcas + '<line x1="' + (X - 3) + '" x2="' + (X + ANCHO + 3) + '" y1="' + y(0) + '" y2="' + y(0) +
+        '" stroke="var(--f1-tinta-suave)"/>' + rects +
+        // gris punteada: el total con sus datos reales (si no tocaste nada, queda tapada por la negra)
+        '<line x1="' + (X - 10) + '" x2="' + (X + ANCHO + 10) + '" y1="' + y(totalReal) + '" y2="' + y(totalReal) +
+        '" stroke="var(--f1-tinta-suave)" stroke-width="2" stroke-dasharray="3 2"><title>Total con sus datos reales: ' +
+        signo(totalReal) + " lugares</title></line>" +
+        '<line x1="' + (X - 6) + '" x2="' + (X + ANCHO + 6) + '" y1="' + y(total) + '" y2="' + y(total) +
+        '" stroke="var(--f1-tinta)" stroke-width="3"><title>Total: ' + signo(total) + " lugares</title></line></svg>";
+
+      const items = CFG.grupos.map((g, k) => {
+        const cambio = Math.abs(ahora[k] - antes[k]) >= 0.05;
+        return '<li title="' + g.nombre + ": " + g.ayuda + '"><i style="background:' + g.color + '"></i><span>' +
+          g.corto + "</span><b>" + signo(ahora[k]) + "</b>" +
+          (cambio ? '<span class="antes">real: ' + signo(antes[k]) + "</span>" : "") + "</li>";
+      }).join("");
+      caja.innerHTML =
+        "<h5>Qué lo mueve</h5>" +
+        '<p class="sub">Lugares de grilla que cada grupo corre a ' + piloto.sigla + " respecto de su largada" +
+        (esNaN(largada) ? " (sin dato: larga último)" : " (P" + Math.round(largada) + ")") +
+        ". Raya negra: el total; gris punteada: el total con sus datos reales.</p>" +
+        '<div class="cuerpo">' + svg + "<ul>" + items + "</ul></div>" +
+        '<p class="total"><b>Total: ' + signo(total) + " lugares</b>" +
+        (Math.abs(total - totalReal) >= 0.05 ? ' <span class="antes">(real: ' + signo(totalReal) + ")</span>" : "") +
+        '<span class="cuenta">Largada ' + (esNaN(largada) ? "sin dato (21)" : "P" + Math.round(largada)) +
+        " → largada equivalente " + coma(equivalente, 1) + " → ordenado con los demás, queda <b>" +
+        puesto + ".º</b></span></p>";
+      }
     }
 
     /* La carrera con los valores del usuario en la pista: la grilla sale de la largada cargada
@@ -877,28 +995,66 @@
   // ---- índice lateral: marca la parte de la página que se está leyendo -------------------------
   const enlaces = [...document.querySelectorAll(".f1-nav-item")];
   const destinos = enlaces.map((a) => document.getElementById(a.getAttribute("href").slice(1)));
+  let ultimaMarca = -1;
   function marcar() {
     let actual = 0;
     destinos.forEach((d, k) => { if (d && d.getBoundingClientRect().top < window.innerHeight * 0.35) actual = k; });
     enlaces.forEach((a, k) => a.classList.toggle("activo", k === actual));
+    // la dirección sigue a lo que se lee: al recargar, vuelve acá (y no al último enlace tocado)
+    if (actual !== ultimaMarca && !navegando) {
+      ultimaMarca = actual;
+      try { history.replaceState(null, "", actual === 0 ? location.pathname + location.search : enlaces[actual].getAttribute("href")); }
+      catch (e) { /* file:// en algunos navegadores: no importa */ }
+    }
   }
   window.addEventListener("scroll", marcar, { passive: true });
-  marcar();
 
-  // Al tocar un ítem del índice se salta directo al título. Con el scroll suave, el viaje pasaba
-  // por las carreras guiadas, que acomodan el scroll en sus paradas, y por gráficos que se dibujan
-  // al aparecer y empujan lo de abajo: se terminaba más arriba del título. Por eso se salta sin
-  // animación y se vuelve a ubicar el título mientras la página termina de acomodarse.
-  enlaces.forEach((a, k) => a.addEventListener("click", (ev) => {
-    const destino = destinos[k];
+  /* Ir a una sección. Los gráficos se dibujan cuando están por verse, así que al llegar los de
+     alrededor todavía cambian de alto y la sección se corre: se salta de una vez y se vuelve a
+     alinear en cada cuadro durante `ms` (o hasta que el usuario scrollee). Sin scroll suave: el
+     viaje pasaría por las carreras guiadas, que acomodan el scroll en sus paradas. Lo mismo al
+     cargar la página con un ancla (recargar, o un enlace compartido). */
+  let cortar = null;
+  function irA(destino, ms = 3000) {
+    if (cortar) cortar();
+    navegando = true;
+    const margen = parseFloat(getComputedStyle(destino).scrollMarginTop) || 0;
+    const alinear = () => {
+      const y = Math.round(destino.getBoundingClientRect().top + window.scrollY - margen);
+      if (Math.abs(window.scrollY - y) > 1) window.scrollTo({ top: y, behavior: "auto" });
+    };
+    let cuadro = null;
+    const vence = Date.now() + ms;
+    const fin = () => {
+      cancelAnimationFrame(cuadro); navegando = false; cortar = null; ultimaMarca = -1; marcar();
+      for (const ev of ["wheel", "touchstart", "keydown", "mousedown"]) window.removeEventListener(ev, fin);
+    };
+    const paso = () => {
+      alinear();
+      if (Date.now() > vence) fin(); else cuadro = requestAnimationFrame(paso);
+    };
+    for (const ev of ["wheel", "touchstart", "keydown", "mousedown"]) window.addEventListener(ev, fin, { passive: true });
+    cortar = fin;
+    alinear(); cuadro = requestAnimationFrame(paso);
+  }
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest('a[href^="#"]');
+    if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    const destino = document.getElementById(decodeURIComponent(a.getAttribute("href").slice(1)));
     if (!destino) return;
-    ev.preventDefault();
-    history.pushState(null, "", a.getAttribute("href"));
-    const ir = () => destino.scrollIntoView({ behavior: "instant", block: "start" });
-    ir();
-    [150, 500, 1000, 1800].forEach((ms) => setTimeout(() => {
-      const margen = parseFloat(getComputedStyle(destino).scrollMarginTop) || 0;
-      if (Math.abs(destino.getBoundingClientRect().top - margen) > 4) ir();
-    }, ms));
-  }));
+    e.preventDefault();
+    try { history.pushState(null, "", a.getAttribute("href")); } catch (err) { /* no importa */ }
+    // el mousedown del clic ya pasó: se puede empezar sin que lo corte
+    irA(destino);
+    a.blur();
+  });
+  window.addEventListener("popstate", () => {
+    const destino = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    if (destino) irA(destino);
+  });
+  // al cargar: el navegador no restaura el scroll (lo haría antes de que estén los gráficos); si
+  // la dirección trae una sección, se va ahí
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  const inicial = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+  if (inicial) irA(inicial, 6000); else marcar();
 })();
