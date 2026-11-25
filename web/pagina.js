@@ -884,4 +884,21 @@
   }
   window.addEventListener("scroll", marcar, { passive: true });
   marcar();
+
+  // Al tocar un ítem del índice se salta directo al título. Con el scroll suave, el viaje pasaba
+  // por las carreras guiadas, que acomodan el scroll en sus paradas, y por gráficos que se dibujan
+  // al aparecer y empujan lo de abajo: se terminaba más arriba del título. Por eso se salta sin
+  // animación y se vuelve a ubicar el título mientras la página termina de acomodarse.
+  enlaces.forEach((a, k) => a.addEventListener("click", (ev) => {
+    const destino = destinos[k];
+    if (!destino) return;
+    ev.preventDefault();
+    history.pushState(null, "", a.getAttribute("href"));
+    const ir = () => destino.scrollIntoView({ behavior: "instant", block: "start" });
+    ir();
+    [150, 500, 1000, 1800].forEach((ms) => setTimeout(() => {
+      const margen = parseFloat(getComputedStyle(destino).scrollMarginTop) || 0;
+      if (Math.abs(destino.getBoundingClientRect().top - margen) > 4) ir();
+    }, ms));
+  }));
 })();

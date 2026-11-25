@@ -60,8 +60,7 @@
     for (let k = 0; k < 3; k++) {
       const r = CFG.records[orden[(desde + k) % orden.length]];
       const div = document.createElement("div"); div.className = "record";
-      div.innerHTML = `<span class="rot">${r.t}</span><span class="n">${r.n}</span><span class="x">${r.x}</span><button type="button">Ver ›</button>`;
-      div.querySelector("button").addEventListener("click", () => aplicar(r.ver));
+      div.innerHTML = `<span class="rot">${r.t}</span><span class="n">${r.n}</span><span class="x">${r.x}</span>`;
       lista.appendChild(div);
     }
   }

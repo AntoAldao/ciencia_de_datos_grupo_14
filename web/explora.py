@@ -2,7 +2,7 @@
 
 Seis partes que maneja `web/explora.js`:
 
-1. Récords y rarezas: datos llamativos calculados acá, cada uno con un link a la vista que lo muestra.
+1. Récords y rarezas: datos llamativos calculados acá.
 2. Pilotos, cara a cara: ficha de uno o comparación de dos.
 3. Armá tu gráfico: el usuario elige tipo de gráfico, ejes, color, filtros y escala.
 4. Todo conectado: tres gráficos que se filtran entre sí.
@@ -105,7 +105,7 @@ def filas_json(d: pd.DataFrame) -> list[dict]:
 
 
 def records(d: pd.DataFrame) -> list[dict]:
-    """Récords y rarezas. `ver` dice a qué vista lleva el botón «Ver» (mismo formato que el link)."""
+    """Récords y rarezas: título, número grande y una frase que lo explica."""
     fin = d.resultado == "Terminó"
     limpio = d.estado.isin(["Finished", "Lapped"])       # llegó a la bandera (sin abandonos ni sanciones)
     rec = []
@@ -116,59 +116,45 @@ def records(d: pd.DataFrame) -> list[dict]:
     ganadores = d[d.final == 1]
     f = ganadores.loc[ganadores.largada.idxmax()]
     rec.append({"t": "La victoria desde más atrás", "n": f"{int(f.largada)}.º",
-                "x": f"{quien(f)}: largó {int(f.largada)}.º y ganó.", "ver": {"v": "pilotos", "a": f.piloto}})
+                "x": f"{quien(f)}: largó {int(f.largada)}.º y ganó."})
     f = d[fin].loc[d[fin].ganados.idxmax()]
     rec.append({"t": "La mayor remontada", "n": f"+{int(f.ganados)}",
-                "x": f"{quien(f)}: largó {int(f.largada)}.º y terminó {int(f.final)}.º.",
-                "ver": {"v": "armar", "tipo": "dispersion", "x": "largada", "y": "final", "color": "resultado",
-                        "pi": f.piloto}})
+                "x": f"{quien(f)}: largó {int(f.largada)}.º y terminó {int(f.final)}.º."})
     f = d[limpio].loc[d[limpio].ganados.idxmin()]
     rec.append({"t": "La peor caída llegando al final", "n": f"{int(f.ganados)}",
-                "x": f"{quien(f)}: largó {int(f.largada)}.º y terminó {int(f.final)}.º.",
-                "ver": {"v": "pilotos", "a": f.piloto}})
+                "x": f"{quien(f)}: largó {int(f.largada)}.º y terminó {int(f.final)}.º."})
     ab = d.groupby(["car", "gpl", "anio"]).abandono.agg(lambda s: int((s > 0).sum())).reset_index()
     f = ab.loc[ab.abandono.idxmax()]
     rec.append({"t": "La carrera con más abandonos", "n": str(int(f.abandono)),
-                "x": f"El {f.gpl} {f.anio}: {int(f.abandono)} autos no llegaron al final.",
-                "ver": {"v": "armar", "tipo": "barras", "x": "tipo_ab", "y": "abandono", "medida": "count",
-                        "desde": int(f.anio), "hasta": int(f.anio), "re": "Abandonó"}})
+                "x": f"El {f.gpl} {f.anio}: {int(f.abandono)} autos no llegaron al final."})
     pole = d[d.largada == 1]
     pct_pole = (pole.final == 1).mean() * 100
     rec.append({"t": "Lo que vale la pole", "n": f"{pct_pole:.0f}%",
                 "x": f"El que larga primero gana el {pct_pole:.0f}% de las veces. Desde fuera del podio de "
-                     f"largada sale solo el {(ganadores.largada > 3).mean() * 100:.0f}% de las victorias.",
-                "ver": {"v": "armar", "tipo": "calor", "x": "largada", "y": "final"}})
+                     f"largada sale solo el {(ganadores.largada > 3).mean() * 100:.0f}% de las victorias."})
     g = d[fin].groupby("piloto").agg(n=("ganados", "size"), m=("ganados", "mean"))
     g = g[g.n >= 30].sort_values("m")
     rec.append({"t": "El que más puestos gana en carrera", "n": f"+{g.m.iloc[-1]:.1f}",
                 "x": f"{g.index[-1]} gana {g.m.iloc[-1]:.1f} puestos por carrera en promedio, entre los que "
-                     "corrieron al menos 30.",
-                "ver": {"v": "armar", "tipo": "barras", "x": "piloto", "y": "ganados", "medida": "mean",
-                        "re": "Terminó"}})
+                     "corrieron al menos 30."})
     a = d.groupby("piloto").agg(n=("abandono", "size"), m=("abandono", "mean"))
     a = a[a.n >= 30].sort_values("m")
     rec.append({"t": "El que más abandona", "n": f"{a.m.iloc[-1]:.0f}%",
-                "x": f"{a.index[-1]} no terminó el {a.m.iloc[-1]:.0f}% de sus {int(a.n.iloc[-1])} carreras.",
-                "ver": {"v": "pilotos", "a": a.index[-1]}})
+                "x": f"{a.index[-1]} no terminó el {a.m.iloc[-1]:.0f}% de sus {int(a.n.iloc[-1])} carreras."})
     victorias = d[d.final == 1].piloto.value_counts()
     rec.append({"t": "El que más ganó", "n": str(int(victorias.iloc[0])),
                 "x": f"{victorias.index[0]} ganó {int(victorias.iloc[0])} de las {d.car.nunique()} carreras de "
-                     f"{d.anio.min()} a {d.anio.max()}.",
-                "ver": {"v": "pilotos", "a": victorias.index[0], "b": victorias.index[1]}})
+                     f"{d.anio.min()} a {d.anio.max()}."})
     e = d.groupby(["equipo", "anio"]).final.mean().unstack()
     salto = e.diff(axis=1).stack().dropna()
     k = salto.abs().idxmax()
     rec.append({"t": "El cambio más brusco de una escudería", "n": f"{abs(salto[k]):.1f}",
                 "x": f"{k[0]} pasó de un puesto final promedio de {e.loc[k[0], k[1] - 1]:.1f} en {k[1] - 1} "
-                     f"a {e.loc[k[0], k[1]]:.1f} en {k[1]}.",
-                "ver": {"v": "armar", "tipo": "evolucion", "y": "final", "color": "equipo", "medida": "mean",
-                        "eq": k[0]}})
+                     f"a {e.loc[k[0], k[1]]:.1f} en {k[1]}."})
     podios = d[(d.final <= 3) & (d.largada >= 15)]
     ultimo = podios.sort_values(["anio", "ronda"]).iloc[-1]
     rec.append({"t": "Podios desde el fondo", "n": str(len(podios)),
-                "x": f"Veces que alguien largó 15.º o más atrás y terminó en el podio. La última: {quien(ultimo)}.",
-                "ver": {"v": "armar", "tipo": "dispersion", "x": "largada", "y": "final", "color": "zona",
-                        "zo": "16 o más"}})
+                "x": f"Veces que alguien largó 15.º o más atrás y terminó en el podio. La última: {quien(ultimo)}."})
     return rec
 
 
@@ -271,4 +257,4 @@ def armar(predicciones: pd.DataFrame) -> tuple[str, dict, dict]:
     n = f"{len(d):,}".replace(",", ".")
     marcado = (WEB / "explora.html").read_text(encoding="utf-8").replace(
         "{n_filas}", html.escape(n)).replace("{desde}", str(d.anio.min())).replace("{hasta}", str(d.anio.max()))
-    return f'<div class="explora" id="explora-los-datos">{marcado}</div>', filas_json(d), config
+    return f'<div class="explora">{marcado}</div>', filas_json(d), config
