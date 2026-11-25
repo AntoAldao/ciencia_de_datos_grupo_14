@@ -58,6 +58,11 @@ CONTROLES = [   # (columna, etiqueta, paso, decimales)
     ("FP_Desgaste_SOFT", "Desgaste con blanda: vuelta promedio vs. mejor (%)", 0.05, 2),
     ("FP_Desgaste_MED", "Desgaste con media: vuelta promedio vs. mejor (%)", 0.05, 2),
 ]
+# los grupos de «Por qué el modelo mueve a cada piloto», en corto para el panel angosto de
+# «Probá el modelo» (el nombre entero va en el tooltip)
+GRUPOS_CORTOS = {model_moves.CHAMP: "Campeonato", model_moves.QUALY: "Clasificación",
+                 model_moves.FP_PACE: "Prácticas: ritmo", model_moves.FP_WEAR: "Prácticas: desgaste",
+                 model_moves.FINISH: "Carreras terminadas"}
 # el menú lateral: versiones cortas de los títulos de cada sector («{n}»: columnas del pipeline)
 RECORRIDO = ["Los datos: de {n} a 8", "La largada y los abandonos", "El modelo contra la grilla"]
 EXPLORAR = [("Explorá los datos", "explora-los-datos", "✦"),   # (texto, ancla, ícono)
@@ -781,6 +786,16 @@ def generar(destino: Path = SITIO) -> Path:
                        "mediana": medianas.get(col)} for col, etiqueta, paso, decimales in CONTROLES],
         "medianas": medianas,
         "simMaxDetras": sim_max_behind,   # tope de la distancia al líder en la pista simulada
+        # «Probá el modelo», a la derecha de la pista: los mismos grupos, colores y cuenta que «Por
+        # qué el modelo mueve a cada piloto» (graficos/model_moves.py), solo para el elegido
+        "grupos": [{"nombre": g, "color": color, "ayuda": model_moves.GROUP_HELP.get(g, ""),
+                    "corto": GRUPOS_CORTOS.get(g, g),
+                    "variables": [v["nombre"] for v in modelo["variables"]
+                                  if v["nombre"] != model_moves.GRID
+                                  and model_moves._group_of(v["nombre"]) == g]}
+                   for g, color in zip([*model_moves.GROUPS, model_moves.OTHER], model_moves.GROUP_COLORS)
+                   if any(model_moves._group_of(v["nombre"]) == g for v in modelo["variables"]
+                          if v["nombre"] != model_moves.GRID)],
     }
 
     # ---- el cuerpo: la copa de martini, en orden ----------------------------------------------------
@@ -1140,9 +1155,12 @@ def generar(destino: Path = SITIO) -> Path:
 
         '<h3 id="proba-el-modelo">Probá el modelo</h3>',
         p("Elegí una carrera y un piloto y cambiá lo que hizo antes de largar: el modelo le "
-          "vuelve a dar un puntaje y lo ordena contra los demás de esa carrera. Los controles "
-          "van del mínimo al máximo que vio el modelo al entrenar, así que no se puede cargar "
-          "un valor que nunca vio; si uno queda en el 1 % más raro de cada punta, la app avisa."),
+          "vuelve a dar un puntaje y lo ordena contra los demás de esa carrera. Cada control va "
+          "de lo que hizo el mejor de esa carrera a lo que hizo el peor (con un poco de margen) "
+          "y nunca sale de lo que vio el modelo al entrenar; si un valor queda en el 1 % más raro "
+          "de cada punta, la app avisa. A la derecha de la carrera, la barra muestra cuántos "
+          "lugares lo corre cada grupo de datos respecto de su largada, como en «Por qué el "
+          "modelo mueve a cada piloto»: ahí se ve qué conviene mover."),
         # un solo panel: a la izquierda lo que se sabe antes de largar, a la derecha la carrera
         '<div id="proba" class="simulador">'
         '<div class="sim-datos">'
@@ -1159,7 +1177,9 @@ def generar(destino: Path = SITIO) -> Path:
         '<button class="correr" type="button">Correr animación</button>'
         '<span class="pista">En rojo, el piloto elegido; en contorno, dónde lo ponía el modelo '
         'con sus datos reales.</span></div>'
-        '<div class="marco"><div class="vista"></div></div></div></div></div>',
+        '<div class="proba-cuerpo"><div class="marco"><div class="vista"></div></div>'
+        '<aside class="proba-aportes" id="proba-aportes" aria-live="polite"></aside></div>'
+        '</div></div></div>',
 
         estilo.pie("Grupo 14 · Ciencia de Datos · UTN FRM", f"Datos 2018–{ANIO_TEST}"),
     ]

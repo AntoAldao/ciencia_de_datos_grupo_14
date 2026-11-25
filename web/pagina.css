@@ -402,6 +402,29 @@ select:focus-visible { outline: 2px solid var(--f1-rojo); outline-offset: 2px; }
 .control .deslizador > span { display: flex; justify-content: space-between; gap: 12px; }
 .control .deslizador output { color: var(--f1-rojo); font-weight: 700; font-variant-numeric: tabular-nums; }
 .control input[type="range"] { width: 100%; accent-color: var(--f1-rojo); cursor: pointer; }
+/* «Probá el modelo»: la pista y, a su derecha, qué lo mueve (web/pagina.js, pintarAportes) */
+.proba-cuerpo { display: grid; grid-template-columns: minmax(0, 1fr) 190px; gap: 0 14px; padding-right: 14px; }
+.proba-cuerpo .marco { min-width: 0; }
+.proba-aportes { font-size: .9rem; color: var(--f1-tinta); padding-top: 4px; }
+.proba-aportes h5 { margin: 0 0 2px; font-size: .95rem; letter-spacing: .03em; text-transform: uppercase; }
+.proba-aportes .sub { margin: 0 0 10px; color: var(--f1-tinta-suave); font-size: .82rem; line-height: 1.3; }
+.proba-aportes .cuerpo { display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 8px; align-items: center; }
+.proba-aportes svg { display: block; overflow: visible; }
+.proba-aportes svg text { font: 600 11px "Titillium Web", system-ui, sans-serif; fill: var(--f1-tinta-suave); }
+.proba-aportes ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.proba-aportes li { display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 2px 7px; line-height: 1.25; }
+.proba-aportes li i { width: 12px; height: 12px; border-radius: 2px; margin-top: 3px; }
+.proba-aportes li b { grid-column: 2; font-variant-numeric: tabular-nums; }
+.proba-aportes li .antes { grid-column: 2; color: var(--f1-tinta-suave); font-size: .8rem; }
+.proba-aportes .total { margin: 12px 0 0; padding-top: 8px; border-top: 1px solid var(--f1-linea); }
+.proba-aportes .total .antes { color: var(--f1-tinta-suave); font-size: .8rem; }
+.proba-aportes .total .cuenta { display: block; margin-top: 4px; color: var(--f1-tinta-suave); font-size: .82rem; line-height: 1.35; }
+.proba-aportes .total .cuenta b { color: var(--f1-tinta); }
+/* con el simulador en dos columnas y poca pantalla, la pista quedaría ilegible: la barra va abajo */
+@media (max-width: 700px), (min-width: 1301px) and (max-width: 1600px) {
+  .proba-cuerpo { grid-template-columns: 1fr; padding: 0 16px; }
+  .proba-aportes { max-width: 360px; padding-top: 16px; }
+}
 .control .extremos {
   display: flex; justify-content: space-between; font-size: .8rem; color: var(--f1-tinta-suave);
   font-variant-numeric: tabular-nums;
