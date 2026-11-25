@@ -218,6 +218,10 @@ select:focus-visible { outline: 2px solid var(--f1-rojo); outline-offset: 2px; }
    (.terminada), el fondo del escenario se vuelve transparente y aparece pegado al gráfico. */
 .guiada.ultima { margin-bottom: calc(-1 * var(--sobra, 0px)); }
 .guiada.ultima.terminada .escenario { background: transparent; }
+/* Lo que subió queda dentro de la caja de la última carrera (que va con z-index 2): con pantallas
+   altas, --sobra crece y el «Cómo lo sabemos» quedaba tapado y no se podía abrir. Al terminar la
+   carrera, lo que sigue pasa por encima. */
+.guiada.ultima.terminada ~ .nota, .guiada.ultima.terminada ~ .como { position: relative; z-index: 3; }
 .ancla-salida + .guiada .escenario { opacity: 0; visibility: hidden; transition: opacity .3s ease, visibility .3s; }
 .ancla-salida + .guiada.montada .escenario { opacity: 1; visibility: visible; }
 .escenario {
