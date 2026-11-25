@@ -1,8 +1,8 @@
-"""Sector 3 · El modelo, contado en tres pasos: tres gráficos fijos, uno al lado del otro.
+"""Sector 3 · El modelo, contado en tres pasos: tres gráficos fijos, uno por fila, en zigzag.
 
 Cada paso es su propio gráfico, con un título que dice qué mirar y una flecha que apunta
-exactamente ahí. El lector no tiene que descubrir ningún botón: lee de izquierda a derecha. La
-explicación larga de cada paso va debajo de su gráfico (web/pagina.py, con los números de `cifras`).
+exactamente ahí. El lector no tiene que descubrir ningún botón: lee de arriba abajo. La
+explicación larga de cada paso va al lado de su gráfico (web/pagina.py, con los números de `cifras`).
 
     Datos:           una fila por piloto y predicción (grilla o modelo) con su error en puestos.
     Transformación:  error = puesto predicho − puesto real, redondeado y recortado a ±15; después
@@ -80,22 +80,26 @@ def _eje_x() -> alt.X:
     # la misma convención en toda la página: + / derecha = más adelante (ganó puestos)
     return alt.X("error_bin:O", title="← terminó más atrás  ·  puestos de error  ·  terminó más adelante →",
                  scale=alt.Scale(domain=list(range(-TOPE, TOPE + 1))),
-                 axis=alt.Axis(labelAngle=0, values=list(range(-TOPE, TOPE + 1, 5)), **C.EJES))
+                 axis=alt.Axis(labelAngle=0, values=list(range(-TOPE, TOPE + 1, 5)), labelFontSize=13,
+                               titleFontSize=13, titlePadding=10, ticks=False, **C.EJES))
 
 
 def _eje_y(campo: str, y_max: float, apilar: bool = False) -> alt.Y:
-    return alt.Y(campo, title="Pilotos", scale=alt.Scale(domain=[0, y_max]), axis=alt.Axis(**C.EJES),
+    return alt.Y(campo, title="Pilotos", scale=alt.Scale(domain=[0, y_max]),
+                 axis=alt.Axis(labelFontSize=13, titleFontSize=13, tickCount=5, domain=False, ticks=False,
+                               **C.EJES),
                  stack="zero" if apilar else None)
 
 
 def _color(grupos: list[str]) -> alt.Color:
     rango = {"Grilla": C.GRILLA, "Modelo": C.MODELO, "Abandonó": C.ABANDONO}
     return alt.Color("grupo:N", title=None, scale=alt.Scale(domain=grupos, range=[rango[g] for g in grupos]),
-                     legend=alt.Legend(orient="top", labelColor=C.INK, symbolType="square", labelFontSize=13))
+                     legend=alt.Legend(orient="top", direction="horizontal", labelColor=C.INK, symbolType="square",
+                                       symbolSize=180, labelFontSize=14, columnPadding=18, offset=14))
 
 
 def _barras(datos: pd.DataFrame, quienes: list[str], grupos: list[str], y_max: float) -> alt.Chart:
-    return alt.Chart(datos).mark_bar(width=alt.RelativeBandSize(0.9), cornerRadiusEnd=1).encode(
+    return alt.Chart(datos).mark_bar(width=alt.RelativeBandSize(0.86), cornerRadiusEnd=2).encode(
         x=_eje_x(), xOffset=alt.XOffset("quien:N", scale=alt.Scale(domain=quienes)),
         y=_eje_y("sum(pilotos):Q", y_max, apilar=True), color=_color(grupos), order=alt.Order("orden:Q"),
         tooltip=[alt.Tooltip("quien:N", title="Predicción"),
@@ -106,18 +110,27 @@ def _barras(datos: pd.DataFrame, quienes: list[str], grupos: list[str], y_max: f
 
 def _cero(y_max: float, hasta: float = 0.7) -> alt.Chart:
     """Línea punteada en el 0 (acierto exacto). Llega a `hasta` del alto: arriba van los textos."""
-    return alt.Chart(pd.DataFrame({"error_bin": [0], "y": [0.0], "y2": [y_max * hasta]})).mark_rule(
-        color=C.INK, strokeDash=[3, 3], opacity=0.6).encode(x=_eje_x(), y=_eje_y("y:Q", y_max), y2="y2:Q")
+    d = pd.DataFrame({"error_bin": [0], "y": [0.0], "y2": [y_max * hasta], "texto": ["acierto"]})
+    regla = alt.Chart(d).mark_rule(color=C.INK, strokeDash=[3, 3], opacity=0.6).encode(
+        x=_eje_x(), y=_eje_y("y:Q", y_max), y2="y2:Q")
+    rotulo = alt.Chart(d).mark_text(baseline="bottom", dy=-4, fontSize=12, color=C.INK_MUTED,
+                                    fontStyle="italic").encode(x=_eje_x(), y=_eje_y("y2:Q", y_max),
+                                                               text="texto:N")
+    return alt.layer(regla, rotulo)
 
 
-def _zona(bins: list[int], y_max: float) -> alt.Chart:
-    """Franja sombreada detrás de las barras: la parte del gráfico de la que habla el texto."""
-    return alt.Chart(pd.DataFrame({"error_bin": bins, "alto": y_max})).mark_bar(
-        color=C.INK, opacity=0.07, width=alt.RelativeBandSize(1)).encode(
-        x=_eje_x(), y=_eje_y("alto:Q", y_max))
+def _zona(tramos: list[tuple[int, int]], y_max: float) -> alt.Chart:
+    """Franja sombreada detrás de las barras: la parte del gráfico de la que habla el texto.
+    Un rectángulo por tramo (de la columna `error_bin` a la `fin`, ambas incluidas), sin cortes."""
+    d = pd.DataFrame([{"error_bin": a, "fin": b, "y": 0.0, "alto": y_max} for a, b in tramos])
+    x = _eje_x()           # el mismo eje que las barras, así no se dibuja otro encima
+    x.bandPosition = 0
+    return alt.Chart(d).mark_rect(color=C.INK, opacity=0.06, cornerRadius=4).encode(
+        x=x,
+        x2=alt.X2("fin:O", bandPosition=1), y=_eje_y("y:Q", y_max), y2="alto:Q")
 
 
-LINEA_PX = 18      # alto de una línea del texto de las flechas, en píxeles
+LINEA_PX = 20      # alto de una línea del texto de las flechas, en píxeles
 
 
 def _flecha(bin_: int, punta: float, arriba: float, texto: str, y_max: float, height: int,
@@ -134,27 +147,28 @@ def _flecha(bin_: int, punta: float, arriba: float, texto: str, y_max: float, he
     base_chart = alt.Chart(d)
     linea = base_chart.mark_rule(color=C.INK, strokeWidth=1.6).encode(
         x=_eje_x(), y=_eje_y("base:Q", y_max), y2="punta:Q")
-    triangulo = base_chart.mark_point(shape="triangle-down", size=80, filled=True, opacity=1,
+    triangulo = base_chart.mark_point(shape="triangle-down", size=110, filled=True, opacity=1,
                                       color=C.INK).encode(x=_eje_x(), y=_eje_y("tri:Q", y_max))
     rotulo = base_chart.mark_text(
-        align=align, baseline="top", dx=dx, lineBreak="\n", fontSize=14, lineHeight=LINEA_PX,
+        align=align, baseline="top", dx=dx, lineBreak="\n", fontSize=15, lineHeight=LINEA_PX,
         fontWeight=600, color=C.INK).encode(x=_eje_x(), y=_eje_y("arriba:Q", y_max), text="texto:N")
     return alt.layer(linea, triangulo, rotulo)
 
 
 def _letras(width: int) -> int:
-    """Letras por línea del subtítulo (14 px, ~6 px por letra) para que ocupe el ancho del
+    """Letras por línea del subtítulo (15 px, ~6,8 px por letra) para que ocupe el ancho del
     gráfico más el eje de la izquierda (~55 px)."""
-    return int((width + 55) / 6.0)
+    return int((width + 55) / 6.8)
 
 
 def _cerrar(grafico: alt.LayerChart, titulo: str, subtitulo: list[str], width: int, height: int):
     return grafico.properties(
         width=width, height=height,
-        title=alt.Title(titulo, subtitle=subtitulo, anchor="start", fontSize=18, color=C.INK,
-                        subtitleColor=C.INK_MUTED, subtitleFontSize=14, subtitlePadding=6, offset=10),
+        title=alt.Title(titulo, subtitle=subtitulo, anchor="start", fontSize=22, fontWeight=700,
+                        color=C.INK, subtitleColor=C.INK_MUTED, subtitleFontSize=15,
+                        subtitleLineHeight=21, subtitlePadding=8, offset=6),
     ).configure(
-        background=C.FONDO, padding={"left": 12, "right": 16, "top": 12, "bottom": 8}
+        background=C.FONDO, padding={"left": 8, "right": 20, "top": 8, "bottom": 8}
     ).configure_view(stroke=None, fill=C.FONDO).configure_text(font=C.FUENTE).configure_title(font=C.FUENTE)
 
 
@@ -184,7 +198,7 @@ def cifras(pred: pd.DataFrame, anio_test: int = 2026) -> dict:
 
 # ---- los tres pasos ----------------------------------------------------------------------------
 def graficos_pasos(pred: pd.DataFrame, test: dict, anio_test: int = 2026,
-                   width: int = 360, height: int = 250) -> list[alt.LayerChart]:
+                   width: int = 640, height: int = 320) -> list[alt.LayerChart]:
     """Los pasos 1, 2 y 3, cada uno su gráfico. `test` es resumen["test"] de build_app."""
     largo = errores(pred)
     del_test = largo[largo["Year"] == anio_test]
@@ -209,7 +223,7 @@ def graficos_pasos(pred: pd.DataFrame, test: dict, anio_test: int = 2026,
     d1 = conteo[conteo["quien"] == "Grilla"].assign(grupo="Grilla", orden=0)
     pico = int(alto_col.loc["Grilla"].idxmax())
     paso1 = alt.layer(
-        _zona(list(range(-2, 3)), y_max), _barras(d1, ["Grilla"], ["Grilla"], y_max), _cero(y_max),
+        _zona([(-2, 2)], y_max), _barras(d1, ["Grilla"], ["Grilla"], y_max), _cero(y_max),
         _flecha(pico, alto("Grilla", pico), y_max * 0.97,
                 f"El {pct(cerca)} termina a 2 puestos\no menos de donde largó", y_max, height))
     sub1 = (f"Predecir que cada uno termina donde largó erra {f(t['mae_grilla'])} puestos en "
@@ -220,7 +234,7 @@ def graficos_pasos(pred: pd.DataFrame, test: dict, anio_test: int = 2026,
     # la flecha va a la columna de errores grandes (a la derecha) donde más se nota la diferencia
     derecha = range(GRANDE, TOPE + 1)
     blanco = max(derecha, key=lambda b: (alto("Grilla", b) - alto("Modelo", b), -b))
-    zona2 = [b for b in range(-TOPE, TOPE + 1) if abs(b) >= GRANDE]
+    zona2 = [(-TOPE, -GRANDE), (GRANDE, TOPE)]
     paso2 = alt.layer(
         _zona(zona2, y_max), _barras(d2, ["Grilla", "Modelo"], ["Grilla", "Modelo"], y_max), _cero(y_max),
         _flecha(blanco, max(alto("Grilla", blanco), alto("Modelo", blanco)), y_max * 0.97,
