@@ -95,11 +95,21 @@ hr {
 .dos-columnas { display: flex; gap: 0 2.5rem; align-items: center; flex-wrap: wrap; }
 .dos-columnas > .grafico { flex: 0 1 auto; }
 .dos-columnas > p { flex: 1 1 300px; }   /* ocupa todo el lugar que deja el gráfico */
-/* Sector 3: los pasos, uno al lado del otro (se leen de izquierda a derecha), cada gráfico con
-   su explicación debajo, del mismo ancho que el gráfico */
-.pasos-fila { display: flex; flex-wrap: wrap; gap: 0 16px; align-items: flex-start; }
-.paso { flex: 0 1 auto; width: min-content; max-width: 100%; }
-.paso > p { margin-top: 0; font-size: 1rem; line-height: 1.55; }
+/* Sector 3: un paso por fila, el gráfico grande y su explicación al lado (si no entran los dos,
+   la explicación baja abajo del gráfico) */
+.pasos-fila { display: flex; flex-direction: column; gap: 1.6rem; margin: 1.4rem 0; }
+.paso { display: flex; flex-wrap: wrap; align-items: center; gap: 0 2.2rem; }
+.paso:nth-child(even) { flex-direction: row-reverse; }   /* zigzag: izquierda, derecha, izquierda */
+.paso:nth-child(even) > p { border-left: none; border-right: 3px solid var(--f1-borde); padding: 4px 18px 4px 0; }
+@media (max-width: 1400px) {   /* si no entran lado a lado, todos a la izquierda y el texto abajo */
+  .paso:nth-child(even) { flex-direction: row; }
+  .paso:nth-child(even) > p { border-right: none; border-left: 3px solid var(--f1-borde); padding: 4px 0 4px 18px; }
+}
+.paso > .grafico { flex: 0 1 auto; margin: 0; border-top: 4px solid var(--f1-rojo); }
+.paso > p {
+  flex: 1 1 320px; max-width: 62ch; margin: 1rem 0; padding: 4px 0 4px 18px;
+  border-left: 3px solid var(--f1-borde); font-size: 1.08rem; line-height: 1.65;
+}
 
 /* Sector 1: los pasos del proceso, numerados y uno al lado del otro */
 .proceso {

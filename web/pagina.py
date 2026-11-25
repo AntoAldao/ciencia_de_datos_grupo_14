@@ -968,7 +968,7 @@ def generar(destino: Path = SITIO) -> Path:
                    f"empatados ({fmt(test['mae_modelo'])} contra {fmt(test['mae_grilla'])})"),
         p(f"Son las {test['carreras']} carreras del test ({ANIO_TEST}), que el modelo no vio al "
           "entrenar. Leé los tres pasos en orden: la flecha marca qué mirar en cada "
-          "gráfico, y debajo está la explicación."),
+          "gráfico, y al lado está la explicación."),
         '<div class="pasos-fila">',
         '<div class="paso">', grafico("paso-1"),
         p("**Cómo se lee.** Cada barra cuenta cuántos pilotos terminaron a esa distancia del puesto "
