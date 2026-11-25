@@ -1111,7 +1111,7 @@ def generar(destino: Path = SITIO) -> Path:
         estilo.parte("explorar", "Explorá por tu cuenta",
               "Recorré los datos como quieras, mirá cualquier temporada y carrera, o cambiá lo que "
               "hizo un piloto antes de largar y fijate qué predice el modelo"),
-        '<h3>Explorá los datos</h3>',
+        '<h3 id="explora-los-datos">Explorá los datos</h3>',
         explora_html,
         '<h3 id="todos-los-pilotos">Todos los pilotos, en todas las carreras</h3>',
         p(f"Las {n_filas_txt} filas de la página: cada piloto en cada Gran Premio de 2018 a "

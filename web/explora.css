@@ -73,9 +73,6 @@
 .explora .record .rot { font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--f1-tinta-suave); }
 .explora .record .n { font-size: 2.3rem; font-weight: 900; font-style: italic; line-height: 1; }
 .explora .record .x { font-size: .98rem; line-height: 1.4; flex: 1; }
-.explora .record button { align-self: flex-start; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--f1-borde);
-                   background: #fff; font: 600 .88rem inherit; cursor: pointer; }
-.explora .record button:hover { border-color: var(--f1-rojo); }
 .explora .otro { margin-top: 12px; padding: 8px 16px; border-radius: 999px; border: 1px solid var(--f1-negro); background: var(--f1-negro);
           color: #fff; font: 700 .95rem inherit; cursor: pointer; }
 .explora .duelo-sel { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: end; margin-bottom: 14px; }
